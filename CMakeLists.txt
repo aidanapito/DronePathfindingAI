@@ -20,9 +20,30 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 # ONNX Runtime (optional, for Track B)
-option(USE_ONNX "Use ONNX Runtime for inference" ON)
+option(USE_ONNX "Use ONNX Runtime for inference" OFF)
 if(USE_ONNX)
+    # Try to find ONNX Runtime - check multiple possible locations
     find_package(ONNXRuntime QUIET)
+    if(NOT ONNXRuntime_FOUND)
+        # Try to find it manually on macOS with Homebrew
+        if(APPLE)
+            find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
+                PATHS /opt/homebrew/include /usr/local/include
+                PATH_SUFFIXES onnxruntime
+            )
+            find_library(ONNXRUNTIME_LIBRARY
+                NAMES onnxruntime
+                PATHS /opt/homebrew/lib /usr/local/lib
+            )
+            if(ONNXRUNTIME_INCLUDE_DIR AND ONNXRUNTIME_LIBRARY)
+                set(ONNXRuntime_FOUND TRUE)
+                set(ONNXRuntime_INCLUDE_DIRS ${ONNXRUNTIME_INCLUDE_DIR})
+                set(ONNXRuntime_LIBRARIES ${ONNXRUNTIME_LIBRARY})
+                message(STATUS "ONNX Runtime found manually: ${ONNXRUNTIME_LIBRARY}")
+            endif()
+        endif()
+    endif()
+    
     if(ONNXRuntime_FOUND)
         message(STATUS "ONNX Runtime found, enabling Track B")
         add_definitions(-DUSE_ONNX)
@@ -61,6 +82,12 @@ file(GLOB_RECURSE SOURCES
     "src/ui/*.cpp"
 )
 
+# Debug: Print found source files
+message(STATUS "Found source files:")
+foreach(SOURCE ${SOURCES})
+    message(STATUS "  ${SOURCE}")
+endforeach()
+
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -71,7 +98,13 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 if(USE_ONNX AND ONNXRuntime_FOUND)
-    target_link_libraries(${PROJECT_NAME} ONNXRuntime::ONNXRuntime)
+    if(TARGET ONNXRuntime::ONNXRuntime)
+        target_link_libraries(${PROJECT_NAME} ONNXRuntime::ONNXRuntime)
+    else()
+        # Manual linking for manually found ONNX Runtime
+        target_include_directories(${PROJECT_NAME} PRIVATE ${ONNXRuntime_INCLUDE_DIRS})
+        target_link_libraries(${PROJECT_NAME} ${ONNXRuntime_LIBRARIES})
+    endif()
 endif()
 
 if(USE_LIBTORCH AND Torch_FOUND)

@@ -50,6 +50,7 @@ public:
     // Statistics
     size_t getQTableSize() const { return q_table_.size(); }
     float getAverageQValue() const;
+    float getMaxQValue(const QState& state) const;
 
 private:
     std::unordered_map<QState, std::vector<float>, QStateHash> q_table_;

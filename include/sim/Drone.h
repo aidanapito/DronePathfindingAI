@@ -4,6 +4,11 @@
 #include <Eigen/Dense>
 #include <vector>
 
+// Forward declaration
+namespace sim {
+    class World;
+}
+
 namespace sim {
 
 struct DroneState {
