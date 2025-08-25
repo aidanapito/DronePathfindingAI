@@ -10,7 +10,7 @@ QLearningAgent::QLearningAgent(const AgentConfig& config)
       grid_resolution_(20), num_heading_buckets_(8),
       stuck_counter_(0), last_progress_step_(0), last_best_distance_(std::numeric_limits<float>::max()),
       is_exploring_(false), exploration_steps_(0), is_backtracking_(false), 
-      is_panic_mode_(false), panic_counter_(0) {
+      is_panic_mode_(false), panic_counter_(0), is_goal_seeking_(false), wall_following_steps_(0) {
 }
 
 Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& drone) {
@@ -58,9 +58,30 @@ Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& dr
         return action;
     }
     
+    // Check if we should enter goal-seeking mode (when not in immediate danger)
+    if (!is_panic_mode_ && !is_exploring_ && !is_backtracking_ && stuck_counter_ < STUCK_THRESHOLD / 3) {
+        // If we're not in immediate danger, try to navigate toward the goal
+        is_goal_seeking_ = true;
+    }
+    
+    // Handle goal-seeking mode (higher priority than exploration, lower than panic)
+    if (is_goal_seeking_ && !is_panic_mode_) {
+        Action action = selectGoalSeekingAction(obs, valid_actions);
+        
+        // Exit goal-seeking mode if we're making good progress or if we hit obstacles
+        if (current_distance < last_best_distance_ - PROGRESS_THRESHOLD) {
+            is_goal_seeking_ = false;
+            resetStuckDetection();
+        } else if (stuck_counter_ > STUCK_THRESHOLD / 2) {
+            is_goal_seeking_ = false;
+        }
+        
+        return action;
+    }
+    
     // Only allow other modes if not in panic mode
     if (isStuck(current_distance)) {
-        if (!is_exploring_ && !is_backtracking_) {
+        if (!is_exploring_ && !is_backtracking_ && !is_panic_mode_ && !is_goal_seeking_) {
             // Start exploration mode
             is_exploring_ = true;
             exploration_steps_ = 0;
@@ -143,6 +164,8 @@ void QLearningAgent::reset() {
     backtrack_path_.clear();
     is_panic_mode_ = false;
     panic_counter_ = 0;
+    is_goal_seeking_ = false;
+    wall_following_steps_ = 0;
 }
 
 void QLearningAgent::updateQValue(const QState& state, Action action, 
@@ -414,9 +437,31 @@ Action QLearningAgent::selectExplorationAction(const QState& state, const std::v
             return gentle_actions[rand() % gentle_actions.size()];
         }
     } else if (exploration_steps_ < 2 * EXPLORATION_DURATION / 3) {
-        // Middle third: more balanced exploration
+        // Middle third: more balanced exploration with goal-seeking behavior
         if (!path_history_.empty()) {
             cv::Point2f current_pos = path_history_.back().position;
+            
+            // Try to find actions that move toward the goal
+            std::vector<Action> goal_seeking_actions;
+            
+            // Check if we can move forward toward the goal
+            if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                // Calculate if moving forward would get us closer to the goal
+                cv::Point2f goal_pos = cv::Point2f(750.0f, 300.0f); // Approximate goal position
+                float current_dist = cv::norm(current_pos - goal_pos);
+                
+                // Simulate forward movement
+                cv::Point2f forward_pos = current_pos + cv::Point2f(
+                    cos(path_history_.back().heading) * 20.0f,
+                    sin(path_history_.back().heading) * 20.0f
+                );
+                float forward_dist = cv::norm(forward_pos - goal_pos);
+                
+                if (forward_dist < current_dist) {
+                    goal_seeking_actions.push_back(Action::THROTTLE_FORWARD);
+                    goal_seeking_actions.push_back(Action::THROTTLE_FORWARD); // Double weight
+                }
+            }
             
             // Check which directions lead to less visited areas
             std::vector<Action> preferred_actions;
@@ -444,6 +489,11 @@ Action QLearningAgent::selectExplorationAction(const QState& state, const std::v
                         preferred_actions.push_back(Action::YAW_RIGHT);
                     }
                 }
+            }
+            
+            // Prioritize goal-seeking actions if available
+            if (!goal_seeking_actions.empty()) {
+                return goal_seeking_actions[rand() % goal_seeking_actions.size()];
             }
             
             if (!preferred_actions.empty()) {
@@ -605,6 +655,8 @@ void QLearningAgent::resetStuckDetection() {
     backtrack_path_.clear();
     is_panic_mode_ = false;
     panic_counter_ = 0;
+    is_goal_seeking_ = false;
+    wall_following_steps_ = 0;
 }
 
 bool QLearningAgent::shouldTerminateBacktracking(float current_distance) const {
@@ -649,6 +701,7 @@ std::string QLearningAgent::getDebugInfo() const {
     info += "  Backtrack Path Size: " + std::to_string(backtrack_path_.size()) + "\n";
     info += "  Is Panic Mode: " + std::string(is_panic_mode_ ? "Yes" : "No") + "\n";
     info += "  Panic Counter: " + std::to_string(panic_counter_) + "\n";
+    info += "  Is Goal Seeking: " + std::string(is_goal_seeking_ ? "Yes" : "No") + "\n";
     info += "  Q-Table Size: " + std::to_string(q_table_.size()) + "\n";
     info += "  Average Q-Value: " + std::to_string(getAverageQValue()) + "\n";
     
@@ -698,6 +751,201 @@ Action QLearningAgent::selectPanicAction(const QState& state, const std::vector<
     }
     
     return action;
+}
+
+Action QLearningAgent::selectGoalSeekingAction(const Observation& obs, const std::vector<Action>& valid_actions) {
+    if (valid_actions.empty()) {
+        return Action::IDLE;
+    }
+    
+    // Get current position and goal direction
+    cv::Point2f current_pos = obs.position;
+    float current_heading = obs.heading;
+    float goal_direction = obs.goal_direction;
+    
+    // Calculate the angle difference between current heading and goal direction
+    float angle_diff = goal_direction - current_heading;
+    
+    // Normalize angle difference to [-π, π]
+    while (angle_diff > M_PI) angle_diff -= 2.0f * M_PI;
+    while (angle_diff < -M_PI) angle_diff += 2.0f * M_PI;
+    
+    // Check if we're near a wall (close to map boundaries)
+    bool near_left_wall = current_pos.x < 50.0f;
+    bool near_right_wall = current_pos.x > 750.0f;
+    bool near_top_wall = current_pos.y < 50.0f;
+    bool near_bottom_wall = current_pos.y > 550.0f;
+    
+    // If we're near a wall, prioritize wall-following behavior
+    if (near_left_wall || near_right_wall || near_top_wall || near_bottom_wall) {
+        wall_following_steps_++;
+        
+        // If we've been wall-following for too long without progress, use aggressive escape
+        if (wall_following_steps_ > 30) { // 30 steps = about 0.5 seconds
+            std::cout << "Goal-seeking: Wall-following timeout, using aggressive escape" << std::endl;
+            
+            // Aggressive escape: try to turn away from the wall and move forward
+            if (near_left_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn away from left wall
+            } else if (near_right_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn away from right wall
+            } else if (near_top_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn away from top wall
+            } else if (near_bottom_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn away from bottom wall
+            }
+            
+            // If turning away doesn't work, try to move forward
+            if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD;
+            }
+        }
+        
+        // Debug output for wall-following
+        if (near_left_wall) std::cout << "Goal-seeking: Near LEFT wall, using wall-following" << std::endl;
+        else if (near_right_wall) std::cout << "Goal-seeking: Near RIGHT wall, using wall-following" << std::endl;
+        else if (near_top_wall) std::cout << "Goal-seeking: Near TOP wall, using wall-following" << std::endl;
+        else if (near_bottom_wall) std::cout << "Goal-seeking: Near BOTTOM wall, using wall-following" << std::endl;
+        
+        // Check if we're stuck in a corner (near multiple walls)
+        bool in_corner = (near_left_wall && near_top_wall) || (near_left_wall && near_bottom_wall) ||
+                        (near_right_wall && near_top_wall) || (near_right_wall && near_bottom_wall);
+        
+        if (in_corner) {
+            std::cout << "Goal-seeking: In CORNER, using aggressive escape strategy" << std::endl;
+            
+            // Corner escape: try to move diagonally away from the corner
+            if (near_left_wall && near_top_wall) {
+                // Top-left corner - try to move down-right
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                    return Action::YAW_RIGHT; // Turn right to face down-right
+                }
+            } else if (near_left_wall && near_bottom_wall) {
+                // Bottom-left corner - try to move up-right
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                    return Action::YAW_LEFT; // Turn left to face up-right
+                }
+            } else if (near_right_wall && near_top_wall) {
+                // Top-right corner - try to move down-left
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                    return Action::YAW_LEFT; // Turn left to face down-left
+                }
+            } else if (near_right_wall && near_bottom_wall) {
+                // Bottom-right corner - try to move up-left
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                    return Action::YAW_RIGHT; // Turn right to face up-left
+                }
+            }
+            
+            // If corner escape didn't work, try to move forward in any available direction
+            if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD;
+            }
+        }
+        
+        // Wall-following strategy: try to move parallel to the wall
+        if (near_left_wall) {
+            // Near left wall - try to move right (positive x direction)
+            if (std::abs(current_heading - 0.0f) < 0.5f && 
+                std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD; // Move right
+            } else if (current_heading > 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn left to face right
+            } else if (current_heading < -0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn right to face right
+            }
+        } else if (near_right_wall) {
+            // Near right wall - try to move left (negative x direction)
+            if (std::abs(current_heading - M_PI) < 0.5f && 
+                std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD; // Move left
+            } else if (current_heading > 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn right to face left
+            } else if (current_heading < -0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn left to face left
+            }
+        } else if (near_top_wall) {
+            // Near top wall - try to move down (positive y direction)
+            if (std::abs(current_heading - M_PI/2.0f) < 0.5f && 
+                std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD; // Move down
+            } else if (current_heading > M_PI/2.0f + 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn left to face down
+            } else if (current_heading < M_PI/2.0f - 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn right to face down
+            }
+        } else if (near_bottom_wall) {
+            // Near bottom wall - try to move up (negative y direction)
+            if (std::abs(current_heading - (-M_PI/2.0f)) < 0.5f && 
+                std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD; // Move up
+            } else if (current_heading > -M_PI/2.0f + 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                return Action::YAW_RIGHT; // Turn right to face up
+            } else if (current_heading < -M_PI/2.0f - 0.5f && 
+                       std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                return Action::YAW_LEFT; // Turn left to face up
+            }
+        }
+        
+        // If wall-following didn't work, try to turn away from the wall
+        if (near_left_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT; // Turn away from left wall
+        } else if (near_right_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT; // Turn away from right wall
+        } else if (near_top_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT; // Turn away from top wall
+        } else if (near_bottom_wall && std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT; // Turn away from bottom wall
+        }
+    }
+    
+    // If we're not near walls, use normal goal-seeking behavior
+    if (!near_left_wall && !near_right_wall && !near_top_wall && !near_bottom_wall) {
+        wall_following_steps_ = 0; // Reset wall-following counter when not near walls
+    }
+    
+    // If we're roughly facing the goal (within 30 degrees), try to move forward
+    if (std::abs(angle_diff) < 0.5f && 
+        std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+        return Action::THROTTLE_FORWARD;
+    }
+    
+    // If we need to turn to face the goal, choose the appropriate turn action
+    if (angle_diff > 0.1f) { // Need to turn left
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT;
+        }
+    } else if (angle_diff < -0.1f) { // Need to turn right
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT;
+        }
+    }
+    
+    // If we can't turn in the preferred direction, try the other direction
+    if (angle_diff > 0.1f) { // Wanted to turn left but couldn't
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT;
+        }
+    } else if (angle_diff < -0.1f) { // Wanted to turn right but couldn't
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT;
+        }
+    }
+    
+    // If we can move forward, do so (even if not perfectly aligned)
+    if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+        return Action::THROTTLE_FORWARD;
+    }
+    
+    // Fallback to any valid action
+    return valid_actions[rand() % valid_actions.size()];
 }
 
 } // namespace agent

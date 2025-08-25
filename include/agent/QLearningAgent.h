@@ -62,6 +62,7 @@ public:
     Action selectExplorationAction(const QState& state, const std::vector<Action>& valid_actions);
     Action selectBacktrackAction(const cv::Point2f& current_pos, float current_heading, const std::vector<Action>& valid_actions);
     Action selectPanicAction(const QState& state, const std::vector<Action>& valid_actions);
+    Action selectGoalSeekingAction(const Observation& obs, const std::vector<Action>& valid_actions);
     
     // Model persistence
     void saveModel(const std::string& path) override;
@@ -99,6 +100,8 @@ private:
     bool is_backtracking_;                       // Flag for backtracking mode
     bool is_panic_mode_;                         // Flag for panic mode (extreme stuck)
     int panic_counter_;                          // Counter for panic mode
+    bool is_goal_seeking_;                       // Flag for goal-seeking navigation mode
+    int wall_following_steps_;                   // Counter for wall-following steps
     
     // Configuration for stuck detection
     static constexpr int MAX_PATH_HISTORY = 100;     // Maximum path history size
@@ -107,7 +110,7 @@ private:
     static constexpr int EXPLORATION_DURATION = 30;  // Steps to explore when stuck
     static constexpr float PROGRESS_THRESHOLD = 5.0f; // Distance improvement threshold
     static constexpr float BACKTRACK_DISTANCE = 50.0f; // Distance to backtrack
-    static constexpr int PANIC_THRESHOLD = 100;       // Steps without progress to enter panic mode
+    static constexpr int PANIC_THRESHOLD = 60;       // Steps without progress to enter panic mode (reduced from 100)
     static constexpr int PANIC_DURATION = 50;         // Steps to stay in panic mode
     static constexpr float CIRCULAR_MOVEMENT_THRESHOLD = 0.5f; // Threshold for circular movement detection
     static constexpr int MIN_CIRCULAR_RADIUS = 20;   // Minimum radius for circular movement detection

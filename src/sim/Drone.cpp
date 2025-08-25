@@ -46,7 +46,17 @@ void Drone::update(float dt, float throttle, float yaw_rate) {
 bool Drone::isEmergencyStop() const {
     // Check if we're too close to any obstacle
     if (world_) {
-        return world_->checkCollision(state_.position, constraints_.emergency_stop_dist);
+        // Check for obstacle collisions
+        if (world_->checkCollision(state_.position, constraints_.emergency_stop_dist)) {
+            return true;
+        }
+        
+        // Check if we're too close to map boundaries
+        float margin = constraints_.emergency_stop_dist;
+        if (state_.position.x < margin || state_.position.x >= world_->getSize().width - margin ||
+            state_.position.y < margin || state_.position.y >= world_->getSize().height - margin) {
+            return true;
+        }
     }
     return false;
 }
@@ -82,7 +92,23 @@ bool Drone::wouldCollide(float throttle, float yaw_rate, float dt) const {
     cv::Point2f new_position = state_.position + cv::Point2f(dx, dy);
     
     // Check if new position would collide with obstacles
-    return world_->checkCollision(new_position, constraints_.safety_margin);
+    if (world_->checkCollision(new_position, constraints_.safety_margin)) {
+        return true;
+    }
+    
+    // Check if new position would be out of bounds
+    if (!world_->isInBounds(new_position)) {
+        return true;
+    }
+    
+    // Check if new position would be too close to boundaries
+    float margin = constraints_.safety_margin;
+    if (new_position.x < margin || new_position.x >= world_->getSize().width - margin ||
+        new_position.y < margin || new_position.y >= world_->getSize().height - margin) {
+        return true;
+    }
+    
+    return false;
 }
 
 cv::Mat Drone::getTopDownView(const World& world, int view_size) const {
