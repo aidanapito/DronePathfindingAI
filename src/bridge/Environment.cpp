@@ -78,7 +78,33 @@ float Environment::getCurrentReward() const {
 }
 
 agent::Observation Environment::getCurrentObservation() const {
-    return createObservation();
+    agent::Observation obs;
+    
+    if (drone_ && world_) {
+        // Create observation based on learning track
+        if (agent_ && agent_->getConfig().use_vision) {
+            obs.image = drone_->getEgoView(*world_, 84);
+        } else {
+            // Create occupancy grid for Track A
+            cv::Mat grid = drone_->getOccupancyGrid(*world_, 21);
+            obs.grid.resize(21 * 21);
+            for (int i = 0; i < 21; ++i) {
+                for (int j = 0; j < 21; ++j) {
+                    obs.grid[i * 21 + j] = grid.at<uchar>(i, j) / 255.0f;
+                }
+            }
+        }
+        
+        obs.heading = drone_->getState().heading;
+        obs.distance_to_goal = drone_->getDistanceToGoal(world_->getGoalPosition());
+        obs.position = drone_->getState().position;
+        
+        // Calculate goal direction
+        cv::Point2f goal_dir = world_->getGoalPosition() - drone_->getState().position;
+        obs.goal_direction = atan2(goal_dir.y, goal_dir.x);
+    }
+    
+    return obs;
 }
 
 void Environment::setAgent(std::shared_ptr<agent::Agent> agent) {
@@ -168,6 +194,7 @@ agent::Observation Environment::createObservation() const {
         
         obs.heading = drone_->getState().heading;
         obs.distance_to_goal = drone_->getDistanceToGoal(world_->getGoalPosition());
+        obs.position = drone_->getState().position;
         
         // Calculate goal direction
         cv::Point2f goal_dir = world_->getGoalPosition() - drone_->getState().position;

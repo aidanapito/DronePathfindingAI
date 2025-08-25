@@ -3,6 +3,8 @@
 #include "Agent.h"
 #include <unordered_map>
 #include <vector>
+#include <deque>
+#include <set>
 
 namespace agent {
 
@@ -24,6 +26,17 @@ struct QStateHash {
                (std::hash<int>()(state.grid_y) << 1) ^ 
                (std::hash<int>()(state.heading_bucket) << 2);
     }
+};
+
+// Path memory structure
+struct PathNode {
+    cv::Point2f position;
+    float heading;
+    int step_count;
+    float reward;
+    
+    PathNode(const cv::Point2f& pos, float h, int step, float r)
+        : position(pos), heading(h), step_count(step), reward(r) {}
 };
 
 class QLearningAgent : public Agent {
@@ -51,6 +64,9 @@ public:
     size_t getQTableSize() const { return q_table_.size(); }
     float getAverageQValue() const;
     float getMaxQValue(const QState& state) const;
+    
+    // Debug information
+    std::string getDebugInfo() const;
 
 private:
     std::unordered_map<QState, std::vector<float>, QStateHash> q_table_;
@@ -64,6 +80,28 @@ private:
     int grid_resolution_;        // Grid cell size
     int num_heading_buckets_;    // Number of heading buckets
     
+    // Path memory and loop detection
+    std::deque<PathNode> path_history_;          // Recent path history
+    std::set<std::pair<int, int>> visited_cells_; // Visited grid cells
+    int stuck_counter_;                          // Counter for stuck detection
+    int last_progress_step_;                     // Last step with progress
+    float last_best_distance_;                   // Best distance achieved
+    bool is_exploring_;                          // Flag for exploration mode
+    int exploration_steps_;                      // Steps in exploration mode
+    std::vector<cv::Point2f> backtrack_path_;    // Path for backtracking
+    bool is_backtracking_;                       // Flag for backtracking mode
+    
+    // Configuration for stuck detection
+    static constexpr int MAX_PATH_HISTORY = 100;     // Maximum path history size
+    static constexpr int STUCK_THRESHOLD = 50;       // Steps without progress to consider stuck
+    static constexpr int LOOP_DETECTION_WINDOW = 20; // Window for loop detection
+    static constexpr int EXPLORATION_DURATION = 30;  // Steps to explore when stuck
+    static constexpr float PROGRESS_THRESHOLD = 5.0f; // Distance improvement threshold
+    static constexpr float BACKTRACK_DISTANCE = 50.0f; // Distance to backtrack
+    static constexpr float CIRCULAR_MOVEMENT_THRESHOLD = 0.5f; // Threshold for circular movement detection
+    static constexpr int MIN_CIRCULAR_RADIUS = 20;   // Minimum radius for circular movement detection
+    static constexpr int MAX_CIRCULAR_RADIUS = 100;  // Maximum radius for circular movement detection
+    
     // Helper methods
     QState discretizeState(const Observation& obs) const;
     Action epsilonGreedyAction(const QState& state);
@@ -73,6 +111,17 @@ private:
     // State conversion
     std::pair<int, int> worldToGrid(const cv::Point2f& world_pos) const;
     int headingToBucket(float heading) const;
+    
+    // Path memory and loop detection
+    void updatePathHistory(const cv::Point2f& position, float heading, float reward);
+    bool detectLoop() const;
+    bool isStuck(float current_distance) const;
+    Action selectExplorationAction(const QState& state);
+    Action selectBacktrackAction(const cv::Point2f& current_pos, float current_heading);
+    void updateBacktrackPath(const cv::Point2f& position, float current_heading);
+    float calculateProgress(float current_distance);
+    void resetStuckDetection();
+    bool shouldTerminateBacktracking(float current_distance) const;
 };
 
 } // namespace agent

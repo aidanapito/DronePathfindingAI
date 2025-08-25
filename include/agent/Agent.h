@@ -24,6 +24,7 @@ struct Observation {
     float heading;              // Current heading
     float goal_direction;       // Direction to goal
     float distance_to_goal;     // Distance to goal
+    cv::Point2f position;      // Current drone position in world coordinates
 };
 
 struct AgentConfig {
