@@ -729,6 +729,33 @@ std::string QLearningAgent::getDebugInfo() const {
     return info;
 }
 
+void QLearningAgent::setOptimalPath(const std::vector<cv::Point2f>& path) {
+    optimal_path_ = path;
+    current_waypoint_index_ = 0;
+    use_pathfinding_ = !path.empty();
+    
+    if (use_pathfinding_) {
+        std::cout << "QLearningAgent: Set optimal path with " << path.size() << " waypoints" << std::endl;
+    }
+}
+
+cv::Point2f QLearningAgent::getNextWaypointDirection(const cv::Point2f& current_pos) const {
+    if (!use_pathfinding_ || optimal_path_.empty() || current_waypoint_index_ >= optimal_path_.size()) {
+        return cv::Point2f(0, 0); // No direction available
+    }
+    
+    cv::Point2f waypoint = optimal_path_[current_waypoint_index_];
+    cv::Point2f direction = waypoint - current_pos;
+    
+    // Normalize direction
+    float magnitude = cv::norm(direction);
+    if (magnitude > 0) {
+        direction = direction * (1.0f / magnitude);
+    }
+    
+    return direction;
+}
+
 Action QLearningAgent::selectPanicAction(const QState& state, const std::vector<Action>& valid_actions) {
     if (valid_actions.empty()) {
         return Action::IDLE;
@@ -762,6 +789,38 @@ Action QLearningAgent::selectGoalSeekingAction(const Observation& obs, const std
     cv::Point2f current_pos = obs.position;
     float current_heading = obs.heading;
     float goal_direction = obs.goal_direction;
+    
+    // If we have pathfinding information, use it for better navigation
+    if (use_pathfinding_ && !optimal_path_.empty()) {
+        cv::Point2f waypoint_direction = getNextWaypointDirection(current_pos);
+        
+        if (cv::norm(waypoint_direction) > 0) {
+            // Calculate angle to waypoint
+            float waypoint_angle = atan2(waypoint_direction.y, waypoint_direction.x);
+            float angle_diff = waypoint_angle - current_heading;
+            
+            // Normalize angle difference to [-π, π]
+            while (angle_diff > M_PI) angle_diff -= 2.0f * M_PI;
+            while (angle_diff < -M_PI) angle_diff += 2.0f * M_PI;
+            
+            // If roughly facing waypoint, move forward
+            if (std::abs(angle_diff) < 0.5f && 
+                std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+                return Action::THROTTLE_FORWARD;
+            }
+            
+            // Turn toward waypoint
+            if (angle_diff > 0.1f) { // Need to turn left
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+                    return Action::YAW_LEFT;
+                }
+            } else if (angle_diff < -0.1f) { // Need to turn right
+                if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+                    return Action::YAW_RIGHT;
+                }
+            }
+        }
+    }
     
     // Calculate the angle difference between current heading and goal direction
     float angle_diff = goal_direction - current_heading;

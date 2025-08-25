@@ -1,9 +1,11 @@
 #include "bridge/Environment.h"
+#include "agent/QLearningAgent.h"
 
 namespace bridge {
 
 Environment::Environment(const EnvironmentConfig& config) 
-    : config_(config), current_step_(0), cumulative_reward_(0.0f) {
+    : config_(config), current_step_(0), cumulative_reward_(0.0f),
+      use_pathfinding_(true), pathfinding_algorithm_("astar"), current_waypoint_index_(0) {
 }
 
 void Environment::reset() {
@@ -14,6 +16,11 @@ void Environment::reset() {
     if (world_ && drone_) {
         episode_start_ = drone_->getState().position;
         episode_goal_ = world_->getGoalPosition();
+        
+        // Compute optimal path if pathfinding is enabled
+        if (use_pathfinding_) {
+            computeOptimalPath();
+        }
     }
 }
 
@@ -58,6 +65,16 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     
     // Update path trace
     updatePathTrace();
+    
+    // Update waypoint progress if using pathfinding
+    if (use_pathfinding_) {
+        updateWaypointProgress();
+        
+        // Pass optimal path to QLearningAgent if it's a QLearningAgent
+        if (auto q_agent = std::dynamic_pointer_cast<agent::QLearningAgent>(agent)) {
+            q_agent->setOptimalPath(optimal_path_);
+        }
+    }
     
     current_step_++;
 }
@@ -161,6 +178,18 @@ float Environment::calculateReward() const {
     // Safety margin penalty
     reward += getSafetyMarginPenalty();
     
+    // Path following reward (when pathfinding is enabled)
+    if (use_pathfinding_ && !optimal_path_.empty()) {
+        float path_distance = getDistanceToPath();
+        float path_reward = -path_distance * 0.01f; // Small penalty for deviating from path
+        reward += path_reward;
+        
+        // Bonus for reaching waypoints
+        if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
+            reward += 5.0f; // Small bonus for waypoint progress
+        }
+    }
+    
     return reward;
 }
 
@@ -233,6 +262,77 @@ float Environment::getTimePenalty() const {
 float Environment::getSafetyMarginPenalty() const {
     // TODO: Implement safety margin penalty
     return 0.0f;
+}
+
+// Pathfinding integration methods
+std::vector<cv::Point2f> Environment::getOptimalPath() const {
+    return optimal_path_;
+}
+
+void Environment::computeOptimalPath() {
+    if (!world_ || !drone_) return;
+    
+    optimal_path_.clear();
+    current_waypoint_index_ = 0;
+    
+    cv::Point2f start = drone_->getState().position;
+    cv::Point2f goal = world_->getGoalPosition();
+    
+    if (pathfinding_algorithm_ == "astar") {
+        optimal_path_ = world_->findPathAStar(start, goal, 10.0f);
+    } else if (pathfinding_algorithm_ == "floodfill") {
+        optimal_path_ = world_->findPathFloodFill(start, goal, 10.0f);
+    }
+    
+    // If no path found, create a direct line to goal
+    if (optimal_path_.empty()) {
+        optimal_path_.push_back(start);
+        optimal_path_.push_back(goal);
+    }
+    
+    std::cout << "Computed optimal path with " << optimal_path_.size() << " waypoints" << std::endl;
+}
+
+float Environment::getDistanceToPath() const {
+    if (optimal_path_.empty() || !drone_) return 0.0f;
+    
+    cv::Point2f current_pos = drone_->getState().position;
+    float min_distance = std::numeric_limits<float>::max();
+    
+    // Find minimum distance to any point on the path
+    for (const auto& waypoint : optimal_path_) {
+        float distance = cv::norm(current_pos - waypoint);
+        min_distance = std::min(min_distance, distance);
+    }
+    
+    return min_distance;
+}
+
+cv::Point2f Environment::getNextWaypoint() const {
+    if (optimal_path_.empty() || current_waypoint_index_ >= optimal_path_.size()) {
+        return world_ ? world_->getGoalPosition() : cv::Point2f(0, 0);
+    }
+    return optimal_path_[current_waypoint_index_];
+}
+
+bool Environment::hasReachedWaypoint() const {
+    if (optimal_path_.empty() || current_waypoint_index_ >= optimal_path_.size()) {
+        return false;
+    }
+    
+    cv::Point2f current_pos = drone_->getState().position;
+    cv::Point2f waypoint = optimal_path_[current_waypoint_index_];
+    float distance = cv::norm(current_pos - waypoint);
+    
+    return distance < 20.0f; // 20 pixel threshold
+}
+
+void Environment::updateWaypointProgress() {
+    if (hasReachedWaypoint()) {
+        current_waypoint_index_++;
+        std::cout << "Reached waypoint " << current_waypoint_index_ - 1 
+                  << " of " << optimal_path_.size() << std::endl;
+    }
 }
 
 } // namespace bridge

@@ -75,6 +75,10 @@ public:
     
     // Debug information
     std::string getDebugInfo() const;
+    
+    // Pathfinding integration
+    void setOptimalPath(const std::vector<cv::Point2f>& path);
+    cv::Point2f getNextWaypointDirection(const cv::Point2f& current_pos) const;
 
 private:
     std::unordered_map<QState, std::vector<float>, QStateHash> q_table_;
@@ -102,6 +106,11 @@ private:
     int panic_counter_;                          // Counter for panic mode
     bool is_goal_seeking_;                       // Flag for goal-seeking navigation mode
     int wall_following_steps_;                   // Counter for wall-following steps
+    
+    // Pathfinding integration
+    std::vector<cv::Point2f> optimal_path_;
+    int current_waypoint_index_;
+    bool use_pathfinding_;
     
     // Configuration for stuck detection
     static constexpr int MAX_PATH_HISTORY = 100;     // Maximum path history size

@@ -72,94 +72,10 @@ include CMakeFiles/DronePathfindingAI.dir/flags.make
 CMakeFiles/DronePathfindingAI.dir/codegen:
 .PHONY : CMakeFiles/DronePathfindingAI.dir/codegen
 
-CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/Simulator.cpp
-CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/Simulator.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/Simulator.cpp > CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/Simulator.cpp -o CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/agent/Agent.cpp
-CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/agent/Agent.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/agent/Agent.cpp > CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/agent/Agent.cpp -o CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/agent/FrameBuffer.cpp
-CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/agent/FrameBuffer.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/agent/FrameBuffer.cpp > CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/agent/FrameBuffer.cpp -o CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/agent/QLearningAgent.cpp
-CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/agent/QLearningAgent.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/agent/QLearningAgent.cpp > CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/agent/QLearningAgent.cpp -o CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/agent/VisionAgent.cpp
-CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/agent/VisionAgent.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/agent/VisionAgent.cpp > CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/agent/VisionAgent.cpp -o CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/bridge/Environment.cpp
-CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/bridge/Environment.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/bridge/Environment.cpp > CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/bridge/Environment.cpp -o CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.s
-
 CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
 CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/main.cpp
 CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/main.cpp
 
 CMakeFiles/DronePathfindingAI.dir/src/main.cpp.i: cmake_force
@@ -170,75 +86,16 @@ CMakeFiles/DronePathfindingAI.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/main.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/main.cpp -o CMakeFiles/DronePathfindingAI.dir/src/main.cpp.s
 
-CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/sim/Drone.cpp
-CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/sim/Drone.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/sim/Drone.cpp > CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/sim/Drone.cpp -o CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/sim/World.cpp
-CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/sim/World.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/sim/World.cpp > CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/sim/World.cpp -o CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.s
-
-CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o: CMakeFiles/DronePathfindingAI.dir/flags.make
-CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o: /Users/aidan/Documents/DronePathfindingAI/src/ui/SimulatorUI.cpp
-CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o: CMakeFiles/DronePathfindingAI.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o -MF CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o.d -o CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o -c /Users/aidan/Documents/DronePathfindingAI/src/ui/SimulatorUI.cpp
-
-CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aidan/Documents/DronePathfindingAI/src/ui/SimulatorUI.cpp > CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.i
-
-CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aidan/Documents/DronePathfindingAI/src/ui/SimulatorUI.cpp -o CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.s
-
 # Object files for target DronePathfindingAI
 DronePathfindingAI_OBJECTS = \
-"CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o" \
-"CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o"
+"CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o"
 
 # External object files for target DronePathfindingAI
 DronePathfindingAI_EXTERNAL_OBJECTS =
 
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o
 bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o
-bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o
 bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/build.make
+bin/DronePathfindingAI: lib/libDronePathfindingAI_lib.a
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_gapi.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_stitching.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_alphamat.4.12.0.dylib
@@ -275,17 +132,17 @@ bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_wechat_qrcode.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_xfeatures2d.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_xobjdetect.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_xphoto.4.12.0.dylib
-bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_shape.4.12.0.dylib
+bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_phase_unwrapping.4.12.0.dylib
+bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_optflow.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_highgui.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_datasets.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_plot.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_text.4.12.0.dylib
+bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_videoio.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_ml.4.12.0.dylib
-bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_phase_unwrapping.4.12.0.dylib
-bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_optflow.4.12.0.dylib
+bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_shape.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_ximgproc.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_video.4.12.0.dylib
-bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_videoio.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_imgcodecs.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_objdetect.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_calib3d.4.12.0.dylib
@@ -296,7 +153,7 @@ bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_photo.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_imgproc.4.12.0.dylib
 bin/DronePathfindingAI: /opt/homebrew/lib/libopencv_core.4.12.0.dylib
 bin/DronePathfindingAI: CMakeFiles/DronePathfindingAI.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX executable bin/DronePathfindingAI"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable bin/DronePathfindingAI"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/DronePathfindingAI.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

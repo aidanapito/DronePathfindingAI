@@ -162,6 +162,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named DronePathfindingAI_lib
+
+# Build rule for target.
+DronePathfindingAI_lib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 DronePathfindingAI_lib
+.PHONY : DronePathfindingAI_lib
+
+# fast build rule for target.
+DronePathfindingAI_lib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/build
+.PHONY : DronePathfindingAI_lib/fast
+
+#=============================================================================
 # Target rules for targets named DronePathfindingAI
 
 # Build rule for target.
@@ -174,12 +187,25 @@ DronePathfindingAI/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/build
 .PHONY : DronePathfindingAI/fast
 
+#=============================================================================
+# Target rules for targets named test_pathfinding
+
+# Build rule for target.
+test_pathfinding: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_pathfinding
+.PHONY : test_pathfinding
+
+# fast build rule for target.
+test_pathfinding/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_pathfinding.dir/build.make CMakeFiles/test_pathfinding.dir/build
+.PHONY : test_pathfinding/fast
+
 src/Simulator.o: src/Simulator.cpp.o
 .PHONY : src/Simulator.o
 
 # target to build an object file
 src/Simulator.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/Simulator.cpp.o
 .PHONY : src/Simulator.cpp.o
 
 src/Simulator.i: src/Simulator.cpp.i
@@ -187,7 +213,7 @@ src/Simulator.i: src/Simulator.cpp.i
 
 # target to preprocess a source file
 src/Simulator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/Simulator.cpp.i
 .PHONY : src/Simulator.cpp.i
 
 src/Simulator.s: src/Simulator.cpp.s
@@ -195,7 +221,7 @@ src/Simulator.s: src/Simulator.cpp.s
 
 # target to generate assembly for a file
 src/Simulator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/Simulator.cpp.s
 .PHONY : src/Simulator.cpp.s
 
 src/agent/Agent.o: src/agent/Agent.cpp.o
@@ -203,7 +229,7 @@ src/agent/Agent.o: src/agent/Agent.cpp.o
 
 # target to build an object file
 src/agent/Agent.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/Agent.cpp.o
 .PHONY : src/agent/Agent.cpp.o
 
 src/agent/Agent.i: src/agent/Agent.cpp.i
@@ -211,7 +237,7 @@ src/agent/Agent.i: src/agent/Agent.cpp.i
 
 # target to preprocess a source file
 src/agent/Agent.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/Agent.cpp.i
 .PHONY : src/agent/Agent.cpp.i
 
 src/agent/Agent.s: src/agent/Agent.cpp.s
@@ -219,7 +245,7 @@ src/agent/Agent.s: src/agent/Agent.cpp.s
 
 # target to generate assembly for a file
 src/agent/Agent.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/Agent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/Agent.cpp.s
 .PHONY : src/agent/Agent.cpp.s
 
 src/agent/FrameBuffer.o: src/agent/FrameBuffer.cpp.o
@@ -227,7 +253,7 @@ src/agent/FrameBuffer.o: src/agent/FrameBuffer.cpp.o
 
 # target to build an object file
 src/agent/FrameBuffer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/FrameBuffer.cpp.o
 .PHONY : src/agent/FrameBuffer.cpp.o
 
 src/agent/FrameBuffer.i: src/agent/FrameBuffer.cpp.i
@@ -235,7 +261,7 @@ src/agent/FrameBuffer.i: src/agent/FrameBuffer.cpp.i
 
 # target to preprocess a source file
 src/agent/FrameBuffer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/FrameBuffer.cpp.i
 .PHONY : src/agent/FrameBuffer.cpp.i
 
 src/agent/FrameBuffer.s: src/agent/FrameBuffer.cpp.s
@@ -243,7 +269,7 @@ src/agent/FrameBuffer.s: src/agent/FrameBuffer.cpp.s
 
 # target to generate assembly for a file
 src/agent/FrameBuffer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/FrameBuffer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/FrameBuffer.cpp.s
 .PHONY : src/agent/FrameBuffer.cpp.s
 
 src/agent/QLearningAgent.o: src/agent/QLearningAgent.cpp.o
@@ -251,7 +277,7 @@ src/agent/QLearningAgent.o: src/agent/QLearningAgent.cpp.o
 
 # target to build an object file
 src/agent/QLearningAgent.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/QLearningAgent.cpp.o
 .PHONY : src/agent/QLearningAgent.cpp.o
 
 src/agent/QLearningAgent.i: src/agent/QLearningAgent.cpp.i
@@ -259,7 +285,7 @@ src/agent/QLearningAgent.i: src/agent/QLearningAgent.cpp.i
 
 # target to preprocess a source file
 src/agent/QLearningAgent.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/QLearningAgent.cpp.i
 .PHONY : src/agent/QLearningAgent.cpp.i
 
 src/agent/QLearningAgent.s: src/agent/QLearningAgent.cpp.s
@@ -267,7 +293,7 @@ src/agent/QLearningAgent.s: src/agent/QLearningAgent.cpp.s
 
 # target to generate assembly for a file
 src/agent/QLearningAgent.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/QLearningAgent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/QLearningAgent.cpp.s
 .PHONY : src/agent/QLearningAgent.cpp.s
 
 src/agent/VisionAgent.o: src/agent/VisionAgent.cpp.o
@@ -275,7 +301,7 @@ src/agent/VisionAgent.o: src/agent/VisionAgent.cpp.o
 
 # target to build an object file
 src/agent/VisionAgent.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/VisionAgent.cpp.o
 .PHONY : src/agent/VisionAgent.cpp.o
 
 src/agent/VisionAgent.i: src/agent/VisionAgent.cpp.i
@@ -283,7 +309,7 @@ src/agent/VisionAgent.i: src/agent/VisionAgent.cpp.i
 
 # target to preprocess a source file
 src/agent/VisionAgent.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/VisionAgent.cpp.i
 .PHONY : src/agent/VisionAgent.cpp.i
 
 src/agent/VisionAgent.s: src/agent/VisionAgent.cpp.s
@@ -291,7 +317,7 @@ src/agent/VisionAgent.s: src/agent/VisionAgent.cpp.s
 
 # target to generate assembly for a file
 src/agent/VisionAgent.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/agent/VisionAgent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/agent/VisionAgent.cpp.s
 .PHONY : src/agent/VisionAgent.cpp.s
 
 src/bridge/Environment.o: src/bridge/Environment.cpp.o
@@ -299,7 +325,7 @@ src/bridge/Environment.o: src/bridge/Environment.cpp.o
 
 # target to build an object file
 src/bridge/Environment.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/bridge/Environment.cpp.o
 .PHONY : src/bridge/Environment.cpp.o
 
 src/bridge/Environment.i: src/bridge/Environment.cpp.i
@@ -307,7 +333,7 @@ src/bridge/Environment.i: src/bridge/Environment.cpp.i
 
 # target to preprocess a source file
 src/bridge/Environment.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/bridge/Environment.cpp.i
 .PHONY : src/bridge/Environment.cpp.i
 
 src/bridge/Environment.s: src/bridge/Environment.cpp.s
@@ -315,7 +341,7 @@ src/bridge/Environment.s: src/bridge/Environment.cpp.s
 
 # target to generate assembly for a file
 src/bridge/Environment.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/bridge/Environment.cpp.s
 .PHONY : src/bridge/Environment.cpp.s
 
 src/main.o: src/main.cpp.o
@@ -323,6 +349,7 @@ src/main.o: src/main.cpp.o
 
 # target to build an object file
 src/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/main.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
@@ -331,6 +358,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/main.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
@@ -339,6 +367,7 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/main.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
@@ -347,7 +376,7 @@ src/sim/Drone.o: src/sim/Drone.cpp.o
 
 # target to build an object file
 src/sim/Drone.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/Drone.cpp.o
 .PHONY : src/sim/Drone.cpp.o
 
 src/sim/Drone.i: src/sim/Drone.cpp.i
@@ -355,7 +384,7 @@ src/sim/Drone.i: src/sim/Drone.cpp.i
 
 # target to preprocess a source file
 src/sim/Drone.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/Drone.cpp.i
 .PHONY : src/sim/Drone.cpp.i
 
 src/sim/Drone.s: src/sim/Drone.cpp.s
@@ -363,7 +392,7 @@ src/sim/Drone.s: src/sim/Drone.cpp.s
 
 # target to generate assembly for a file
 src/sim/Drone.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/Drone.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/Drone.cpp.s
 .PHONY : src/sim/Drone.cpp.s
 
 src/sim/World.o: src/sim/World.cpp.o
@@ -371,7 +400,7 @@ src/sim/World.o: src/sim/World.cpp.o
 
 # target to build an object file
 src/sim/World.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/World.cpp.o
 .PHONY : src/sim/World.cpp.o
 
 src/sim/World.i: src/sim/World.cpp.i
@@ -379,7 +408,7 @@ src/sim/World.i: src/sim/World.cpp.i
 
 # target to preprocess a source file
 src/sim/World.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/World.cpp.i
 .PHONY : src/sim/World.cpp.i
 
 src/sim/World.s: src/sim/World.cpp.s
@@ -387,15 +416,39 @@ src/sim/World.s: src/sim/World.cpp.s
 
 # target to generate assembly for a file
 src/sim/World.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/sim/World.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/sim/World.cpp.s
 .PHONY : src/sim/World.cpp.s
+
+src/test_pathfinding.o: src/test_pathfinding.cpp.o
+.PHONY : src/test_pathfinding.o
+
+# target to build an object file
+src/test_pathfinding.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_pathfinding.dir/build.make CMakeFiles/test_pathfinding.dir/src/test_pathfinding.cpp.o
+.PHONY : src/test_pathfinding.cpp.o
+
+src/test_pathfinding.i: src/test_pathfinding.cpp.i
+.PHONY : src/test_pathfinding.i
+
+# target to preprocess a source file
+src/test_pathfinding.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_pathfinding.dir/build.make CMakeFiles/test_pathfinding.dir/src/test_pathfinding.cpp.i
+.PHONY : src/test_pathfinding.cpp.i
+
+src/test_pathfinding.s: src/test_pathfinding.cpp.s
+.PHONY : src/test_pathfinding.s
+
+# target to generate assembly for a file
+src/test_pathfinding.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_pathfinding.dir/build.make CMakeFiles/test_pathfinding.dir/src/test_pathfinding.cpp.s
+.PHONY : src/test_pathfinding.cpp.s
 
 src/ui/SimulatorUI.o: src/ui/SimulatorUI.cpp.o
 .PHONY : src/ui/SimulatorUI.o
 
 # target to build an object file
 src/ui/SimulatorUI.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/ui/SimulatorUI.cpp.o
 .PHONY : src/ui/SimulatorUI.cpp.o
 
 src/ui/SimulatorUI.i: src/ui/SimulatorUI.cpp.i
@@ -403,7 +456,7 @@ src/ui/SimulatorUI.i: src/ui/SimulatorUI.cpp.i
 
 # target to preprocess a source file
 src/ui/SimulatorUI.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/ui/SimulatorUI.cpp.i
 .PHONY : src/ui/SimulatorUI.cpp.i
 
 src/ui/SimulatorUI.s: src/ui/SimulatorUI.cpp.s
@@ -411,7 +464,7 @@ src/ui/SimulatorUI.s: src/ui/SimulatorUI.cpp.s
 
 # target to generate assembly for a file
 src/ui/SimulatorUI.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/ui/SimulatorUI.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/ui/SimulatorUI.cpp.s
 .PHONY : src/ui/SimulatorUI.cpp.s
 
 # Help Target
@@ -427,6 +480,8 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... DronePathfindingAI"
+	@echo "... DronePathfindingAI_lib"
+	@echo "... test_pathfinding"
 	@echo "... src/Simulator.o"
 	@echo "... src/Simulator.i"
 	@echo "... src/Simulator.s"
@@ -454,6 +509,9 @@ help:
 	@echo "... src/sim/World.o"
 	@echo "... src/sim/World.i"
 	@echo "... src/sim/World.s"
+	@echo "... src/test_pathfinding.o"
+	@echo "... src/test_pathfinding.i"
+	@echo "... src/test_pathfinding.s"
 	@echo "... src/ui/SimulatorUI.o"
 	@echo "... src/ui/SimulatorUI.i"
 	@echo "... src/ui/SimulatorUI.s"

@@ -55,6 +55,13 @@ public:
     const std::vector<EpisodeResult>& getEpisodeHistory() const { return episode_history_; }
     float getAverageEpisodeLength() const;
     float getSuccessRate() const;
+    
+    // Pathfinding integration
+    std::vector<cv::Point2f> getOptimalPath() const;
+    void setUsePathfinding(bool use) { use_pathfinding_ = use; }
+    bool getUsePathfinding() const { return use_pathfinding_; }
+    void setPathfindingAlgorithm(const std::string& algorithm) { pathfinding_algorithm_ = algorithm; }
+    std::string getPathfindingAlgorithm() const { return pathfinding_algorithm_; }
 
 private:
     EnvironmentConfig config_;
@@ -73,6 +80,12 @@ private:
     // History
     std::vector<EpisodeResult> episode_history_;
     
+    // Pathfinding integration
+    bool use_pathfinding_;
+    std::string pathfinding_algorithm_;
+    std::vector<cv::Point2f> optimal_path_;
+    int current_waypoint_index_;
+    
     // Helper methods
     float calculateReward() const;
     bool checkEpisodeTermination() const;
@@ -85,6 +98,13 @@ private:
     float getProgressReward() const;
     float getTimePenalty() const;
     float getSafetyMarginPenalty() const;
+    
+    // Pathfinding helpers
+    void computeOptimalPath();
+    float getDistanceToPath() const;
+    cv::Point2f getNextWaypoint() const;
+    bool hasReachedWaypoint() const;
+    void updateWaypointProgress();
 };
 
 } // namespace bridge

@@ -73,26 +73,51 @@ include_directories(
     ${EIGEN3_INCLUDE_DIR}
 )
 
-# Source files
-file(GLOB_RECURSE SOURCES 
-    "src/*.cpp"
-    "src/sim/*.cpp"
-    "src/agent/*.cpp"
-    "src/bridge/*.cpp"
-    "src/ui/*.cpp"
+# Source files for main executable
+set(MAIN_SOURCES
+    "src/Simulator.cpp"
+    "src/agent/Agent.cpp"
+    "src/agent/FrameBuffer.cpp"
+    "src/agent/QLearningAgent.cpp"
+    "src/agent/VisionAgent.cpp"
+    "src/bridge/Environment.cpp"
+    "src/main.cpp"
+    "src/sim/Drone.cpp"
+    "src/sim/World.cpp"
+    "src/ui/SimulatorUI.cpp"
 )
 
 # Debug: Print found source files
-message(STATUS "Found source files:")
-foreach(SOURCE ${SOURCES})
+message(STATUS "Found main source files:")
+foreach(SOURCE ${MAIN_SOURCES})
     message(STATUS "  ${SOURCE}")
 endforeach()
 
-# Create executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+# Create library target for core functionality
+add_library(${PROJECT_NAME}_lib STATIC ${MAIN_SOURCES})
 
-# Link libraries
+# Create main executable
+add_executable(${PROJECT_NAME} src/main.cpp)
+
+# Create test executable
+add_executable(test_pathfinding src/test_pathfinding.cpp)
+
+# Link libraries for library target
+target_link_libraries(${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for main executable
 target_link_libraries(${PROJECT_NAME} 
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for test executable
+target_link_libraries(test_pathfinding
+    ${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
     ${EIGEN3_LIBS}
 )

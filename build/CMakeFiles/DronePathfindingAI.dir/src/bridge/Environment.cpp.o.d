@@ -975,6 +975,7 @@ CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__random/student_t_distribution.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__random/uniform_random_bit_generator.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__random/weibull_distribution.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/unordered_set \
   /Users/aidan/Documents/DronePathfindingAI/include/bridge/../sim/Drone.h \
   /opt/homebrew/include/eigen3/Eigen/Dense \
   /opt/homebrew/include/eigen3/Eigen/Core \
@@ -1167,4 +1168,6 @@ CMakeFiles/DronePathfindingAI.dir/src/bridge/Environment.cpp.o: \
   /opt/homebrew/include/eigen3/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
   /opt/homebrew/include/eigen3/Eigen/src/Eigenvalues/./RealQZ.h \
   /opt/homebrew/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
-  /Users/aidan/Documents/DronePathfindingAI/include/bridge/../agent/Agent.h
+  /Users/aidan/Documents/DronePathfindingAI/include/bridge/../agent/Agent.h \
+  /Users/aidan/Documents/DronePathfindingAI/include/agent/QLearningAgent.h \
+  /Users/aidan/Documents/DronePathfindingAI/include/agent/Agent.h
