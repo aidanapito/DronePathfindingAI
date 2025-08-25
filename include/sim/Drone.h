@@ -53,6 +53,9 @@ public:
     void setConstraints(const DroneConstraints& constraints);
     const DroneConstraints& getConstraints() const { return constraints_; }
     
+    // World reference
+    void setWorld(const World* world) { world_ = world; }
+    
     // Utility
     float getDistanceToGoal(const cv::Point2f& goal) const;
     float getProgressToGoal(const cv::Point2f& start, const cv::Point2f& goal) const;
@@ -61,6 +64,7 @@ public:
 private:
     DroneState state_;
     DroneConstraints constraints_;
+    const World* world_;  // Reference to world for collision detection
     
     // Sensor parameters
     float camera_height_;

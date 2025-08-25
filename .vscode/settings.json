@@ -1,0 +1,34 @@
+{
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.intelliSenseMode": "macos-clang-arm64",
+    "C_Cpp.default.compilerPath": "/usr/bin/c++",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/include",
+        "/opt/homebrew/include",
+        "/opt/homebrew/include/opencv4",
+        "/opt/homebrew/include/eigen3"
+    ],
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.autocomplete": "default",
+    "C_Cpp.enhancedColorization": "enabled",
+    "C_Cpp.suggestSnippets": true,
+    "files.associations": {
+        "*.h": "cpp",
+        "*.hpp": "cpp",
+        "*.cpp": "cpp",
+        "*.cc": "cpp",
+        "*.cxx": "cpp",
+        "CMakeLists.txt": "cmake",
+        "*.cmake": "cmake"
+    },
+    "cmake.configureOnOpen": true,
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.generator": "Unix Makefiles",
+    "cmake.debugConfig": {
+        "stopOnEntry": false,
+        "cwd": "${workspaceFolder}"
+    }
+}

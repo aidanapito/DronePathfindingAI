@@ -5,7 +5,7 @@
 namespace sim {
 
 Drone::Drone(const cv::Point2f& start_pos, float start_heading)
-    : camera_height_(100.0f), camera_fov_(M_PI / 3.0f), max_sensor_range_(200.0f) {
+    : world_(nullptr), camera_height_(100.0f), camera_fov_(M_PI / 3.0f), max_sensor_range_(200.0f) {
     state_.position = start_pos;
     state_.heading = start_heading;
     state_.velocity = 0.0f;
@@ -44,7 +44,10 @@ void Drone::update(float dt, float throttle, float yaw_rate) {
 }
 
 bool Drone::isEmergencyStop() const {
-    // TODO: Implement emergency stop logic
+    // Check if we're too close to any obstacle
+    if (world_) {
+        return world_->checkCollision(state_.position, constraints_.emergency_stop_dist);
+    }
     return false;
 }
 
@@ -57,8 +60,8 @@ bool Drone::isWithinConstraints(float throttle, float yaw_rate) const {
     if (std::abs(throttle) > 1.0f) return false;
     if (std::abs(yaw_rate) > constraints_.max_angular_velocity) return false;
     
-    // Check minimum turn radius
-    if (state_.velocity > 0 && std::abs(yaw_rate) > 0) {
+    // Check minimum turn radius only when moving forward
+    if (throttle > 0.1f && std::abs(yaw_rate) > 0) {
         float turn_radius = state_.velocity / std::abs(yaw_rate);
         if (turn_radius < constraints_.min_turn_radius) return false;
     }

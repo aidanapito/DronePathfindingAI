@@ -1172,4 +1172,17 @@ CMakeFiles/DronePathfindingAI.dir/src/Simulator.cpp.o: \
   /Users/aidan/Documents/DronePathfindingAI/include/bridge/../sim/World.h \
   /Users/aidan/Documents/DronePathfindingAI/include/bridge/../sim/Drone.h \
   /Users/aidan/Documents/DronePathfindingAI/include/bridge/../agent/Agent.h \
-  /Users/aidan/Documents/DronePathfindingAI/include/ui/SimulatorUI.h
+  /Users/aidan/Documents/DronePathfindingAI/include/ui/SimulatorUI.h \
+  /Users/aidan/Documents/DronePathfindingAI/include/agent/QLearningAgent.h \
+  /Users/aidan/Documents/DronePathfindingAI/include/agent/VisionAgent.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/thread \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__thread/formatter.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__thread/jthread.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/stop_source.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/intrusive_shared_ptr.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/stop_state.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/atomic_unique_lock.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/intrusive_list_view.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__stop_token/stop_token.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__thread/thread.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__thread/this_thread.h

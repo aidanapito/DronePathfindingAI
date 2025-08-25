@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cmake-tools-extension-pack",
+        "twxs.cmake",
+        "ms-vscode.makefile-tools",
+        "ms-vscode.cpp-debug",
+        "ms-vscode.cpp-debug-extension-pack"
+    ]
+}

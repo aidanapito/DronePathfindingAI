@@ -128,13 +128,54 @@ void World::randomizeTextures() {
 }
 
 void World::generateMaze() {
-    // TODO: Implement maze generation algorithm
-    addRandomObstacles(20, 15.0f, 30.0f);
+    // Create a more navigable maze with corridors
+    obstacles_.clear();
+    
+    // Add some walls to create corridors
+    for (int i = 0; i < 10; ++i) {
+        // Horizontal walls
+        float y = 100.0f + i * 50.0f;
+        for (int j = 0; j < 8; ++j) {
+            float x = 150.0f + j * 80.0f;
+            Obstacle obs;
+            obs.position = cv::Point2f(x, y);
+            obs.radius = 8.0f;
+            obs.is_moving = false;
+            obs.velocity = cv::Point2f(0.0f, 0.0f);
+            obs.max_speed = 0.0f;
+            obstacles_.push_back(obs);
+        }
+    }
+    
+    // Add some random obstacles but not too many
+    addRandomObstacles(15, 10.0f, 20.0f);
 }
 
 void World::generateCorridor() {
-    // TODO: Implement corridor generation
-    addRandomObstacles(15, 10.0f, 25.0f);
+    // Create a clear corridor with minimal obstacles
+    obstacles_.clear();
+    
+    // Add some walls to create a clear path
+    for (int i = 0; i < 5; ++i) {
+        // Left wall
+        float x = 200.0f;
+        float y = 100.0f + i * 100.0f;
+        Obstacle obs;
+        obs.position = cv::Point2f(x, y);
+        obs.radius = 12.0f;
+        obs.is_moving = false;
+        obs.velocity = cv::Point2f(0.0f, 0.0f);
+        obs.max_speed = 0.0f;
+        obstacles_.push_back(obs);
+        
+        // Right wall
+        x = 600.0f;
+        obs.position = cv::Point2f(x, y);
+        obstacles_.push_back(obs);
+    }
+    
+    // Add very few random obstacles in the corridor
+    addRandomObstacles(5, 8.0f, 15.0f);
 }
 
 void World::generateOpenField() {
