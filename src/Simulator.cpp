@@ -127,6 +127,7 @@ void Simulator::reset() {
         drone_->setState(sim::DroneState{start_pos, 0.0f, 0.0f, 0.0f});
     }
     
+    // Reset agent's stuck detection state for new episode
     if (agent_) {
         agent_->reset();
     }
@@ -206,110 +207,56 @@ void Simulator::updateSimulation() {
         world_->update(time_step_);
     }
     
-    if (drone_) {
-        // Simple goal-seeking behavior
-        cv::Point2f drone_pos = drone_->getState().position;
-        cv::Point2f goal_pos = world_->getGoalPosition();
-        float current_heading = drone_->getState().heading;
+    if (drone_ && agent_) {
+        // Use the enhanced agent with stuck detection instead of hardcoded behavior
         
-        // Calculate direction to goal
-        cv::Point2f to_goal = goal_pos - drone_pos;
-        float goal_distance = cv::norm(to_goal);
-        float goal_angle = atan2(to_goal.y, to_goal.x);
-        
-        // Calculate heading difference (normalize to [-π, π])
-        float heading_diff = goal_angle - current_heading;
-        while (heading_diff > M_PI) heading_diff -= 2 * M_PI;
-        while (heading_diff < -M_PI) heading_diff += 2 * M_PI;
-        
-        // Check for obstacles ahead with multiple detection points
-        bool obstacle_ahead = false;
-        bool obstacle_near = false;
-        
-        // Far detection point (for early warning)
-        float far_look_ahead = 60.0f;  // Increased from 30.0f
-        cv::Point2f far_look_ahead_pos = drone_pos + cv::Point2f(
-            far_look_ahead * cos(current_heading),
-            far_look_ahead * sin(current_heading)
-        );
-        
-        // Medium detection point
-        float medium_look_ahead = 40.0f;
-        cv::Point2f medium_look_ahead_pos = drone_pos + cv::Point2f(
-            medium_look_ahead * cos(current_heading),
-            medium_look_ahead * sin(current_heading)
-        );
-        
-        // Near detection point (for immediate action)
-        float near_look_ahead = 25.0f;
-        cv::Point2f near_look_ahead_pos = drone_pos + cv::Point2f(
-            near_look_ahead * cos(current_heading),
-            near_look_ahead * sin(current_heading)
-        );
-        
-        // Check collision at different distances
-        if (world_->checkCollision(far_look_ahead_pos, 8.0f)) {
-            obstacle_ahead = true;
-        } else if (world_->checkCollision(medium_look_ahead_pos, 6.0f)) {
-            obstacle_ahead = true;
-        } else if (world_->checkCollision(near_look_ahead_pos, 4.0f)) {
-            obstacle_near = true;
+        // Create observation for the agent
+        agent::Observation obs;
+        if (agent_->getConfig().use_vision) {
+            obs.image = drone_->getEgoView(*world_, 84);
+        } else {
+            // Create occupancy grid for Track A
+            cv::Mat grid = drone_->getOccupancyGrid(*world_, 21);
+            obs.grid.resize(21 * 21);
+            for (int i = 0; i < 21; ++i) {
+                for (int j = 0; j < 21; ++j) {
+                    obs.grid[i * 21 + j] = grid.at<uchar>(i, j) / 255.0f;
+                }
+            }
         }
         
-        // Check for obstacles on the sides to help with navigation
-        bool obstacle_left = false;
-        bool obstacle_right = false;
+        obs.heading = drone_->getState().heading;
+        obs.distance_to_goal = drone_->getDistanceToGoal(world_->getGoalPosition());
+        obs.position = drone_->getState().position;
         
-        // Check left side
-        cv::Point2f left_check_pos = drone_pos + cv::Point2f(
-            20.0f * cos(current_heading + M_PI/2.0f),
-            20.0f * sin(current_heading + M_PI/2.0f)
-        );
-        if (world_->checkCollision(left_check_pos, 6.0f)) {
-            obstacle_left = true;
-        }
+        // Calculate goal direction
+        cv::Point2f goal_dir = world_->getGoalPosition() - drone_->getState().position;
+        obs.goal_direction = atan2(goal_dir.y, goal_dir.x);
         
-        // Check right side
-        cv::Point2f right_check_pos = drone_pos + cv::Point2f(
-            20.0f * cos(current_heading - M_PI/2.0f),
-            20.0f * sin(current_heading - M_PI/2.0f)
-        );
-        if (world_->checkCollision(right_check_pos, 6.0f)) {
-            obstacle_right = true;
-        }
+        // Get action from the enhanced agent
+        agent::Action action = agent_->selectAction(obs, *drone_);
         
-        // Decision making
+        // Convert action to drone controls
         float throttle = 0.0f;
         float yaw_rate = 0.0f;
         
-        if (obstacle_ahead) {
-            // Obstacle detected far ahead - start turning early
-            if (obstacle_right) {
-                // Right side blocked, turn left
-                yaw_rate = -1.2f;
-            } else {
-                // Turn right to avoid
-                yaw_rate = 1.2f;
-            }
-            throttle = 0.0f;  // Stop forward movement
-        } else if (obstacle_near) {
-            // Obstacle detected nearby - turn more aggressively
-            if (obstacle_right) {
-                // Right side blocked, turn left
-                yaw_rate = -1.5f;
-            } else {
-                // Turn right more aggressively
-                yaw_rate = 1.5f;
-            }
-            throttle = 0.0f;  // Stop forward movement
-        } else if (std::abs(heading_diff) > 0.3f) {
-            // Not facing goal - turn towards it
-            yaw_rate = (heading_diff > 0) ? 0.8f : -0.8f;
-            throttle = 0.0f;  // Don't move forward while turning
-        } else {
-            // Facing goal and no obstacles - move forward
-            throttle = 0.8f;  // Move forward at 80% speed
-            yaw_rate = 0.0f;  // No turning needed
+        switch (action) {
+            case agent::Action::THROTTLE_FORWARD:
+                throttle = 0.8f;
+                yaw_rate = 0.0f;
+                break;
+            case agent::Action::YAW_LEFT:
+                throttle = 0.0f;
+                yaw_rate = -1.0f;
+                break;
+            case agent::Action::YAW_RIGHT:
+                throttle = 0.0f;
+                yaw_rate = 1.0f;
+                break;
+            case agent::Action::IDLE:
+                throttle = 0.0f;
+                yaw_rate = 0.0f;
+                break;
         }
         
         // Apply emergency stop if too close to obstacles
@@ -321,23 +268,68 @@ void Simulator::updateSimulation() {
         // Update drone
         drone_->update(time_step_, throttle, yaw_rate);
         
+        // Create next observation for learning
+        agent::Observation next_obs = obs;
+        next_obs.position = drone_->getState().position;
+        next_obs.heading = drone_->getState().heading;
+        next_obs.distance_to_goal = drone_->getDistanceToGoal(world_->getGoalPosition());
+        
+        // Calculate reward
+        float reward = 0.0f;
+        float goal_distance = drone_->getDistanceToGoal(world_->getGoalPosition());
+        
+        // Goal reward
+        if (goal_distance < 20.0f) {
+            reward += 1.0f;
+        }
+        
+        // Progress reward
+        static float last_distance = std::numeric_limits<float>::max();
+        if (goal_distance < last_distance) {
+            reward += 0.02f;  // Small positive reward for progress
+        }
+        last_distance = goal_distance;
+        
+        // Collision penalty
+        if (world_->checkCollision(drone_->getState().position, 10.0f)) {
+            reward -= 1.0f;
+        }
+        
+        // Time penalty
+        reward -= 0.005f;
+        
+        // Update agent policy
+        bool done = (goal_distance < 20.0f) || world_->checkCollision(drone_->getState().position, 10.0f);
+        agent_->updatePolicy(obs, action, reward, next_obs, done);
+        
         // Check if goal reached
         if (goal_distance < 20.0f) {
             std::cout << "Goal reached! Episode completed successfully!" << std::endl;
             reset();
         }
         
-        // Check if drone is stuck (not moving for too long)
+        // Check if drone is stuck using the enhanced stuck detection
         static int stuck_counter = 0;
-        if (std::abs(drone_->getState().velocity) < 1.0f) {
+        if (std::abs(drone_->getState().velocity) < 1.0f && std::abs(yaw_rate) < 0.1f) {
             stuck_counter++;
-            if (stuck_counter > 100) { // Stuck for 100 frames
+            if (stuck_counter > 200) { // Increased threshold since agent should handle stuck situations
                 std::cout << "Drone appears stuck, resetting..." << std::endl;
                 reset();
                 stuck_counter = 0;
             }
         } else {
             stuck_counter = 0;
+        }
+        
+        // Print debug info periodically
+        static int debug_counter = 0;
+        debug_counter++;
+        if (debug_counter % 100 == 0) {
+            if (auto q_agent = std::dynamic_pointer_cast<agent::QLearningAgent>(agent_)) {
+                std::cout << "\n=== Agent Debug Info ===" << std::endl;
+                std::cout << q_agent->getDebugInfo() << std::endl;
+                std::cout << "=======================" << std::endl;
+            }
         }
     }
 }

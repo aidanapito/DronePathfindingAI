@@ -9,28 +9,69 @@ QLearningAgent::QLearningAgent(const AgentConfig& config)
     : Agent(config), alpha_(0.1f), gamma_(0.99f), epsilon_(0.1f),
       grid_resolution_(20), num_heading_buckets_(8),
       stuck_counter_(0), last_progress_step_(0), last_best_distance_(std::numeric_limits<float>::max()),
-      is_exploring_(false), exploration_steps_(0), is_backtracking_(false) {
+      is_exploring_(false), exploration_steps_(0), is_backtracking_(false), 
+      is_panic_mode_(false), panic_counter_(0) {
 }
 
-Action QLearningAgent::selectAction(const Observation& obs) {
+Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& drone) {
     QState state = discretizeState(obs);
+    
+    // Get valid actions early so they can be used throughout the method
+    std::vector<Action> valid_actions = getValidActions(drone);
+    if (valid_actions.empty()) {
+        return Action::IDLE; // Fallback
+    }
     
     // Check if we're stuck and need special handling
     float current_distance = obs.distance_to_goal;
     
+    // Check if we need to enter panic mode
+    if (stuck_counter_ > PANIC_THRESHOLD && !is_panic_mode_) {
+        is_panic_mode_ = true;
+        panic_counter_ = 0;
+        is_exploring_ = false;
+        is_backtracking_ = false;
+        std::cout << "Agent entering PANIC MODE - extreme stuck situation!" << std::endl;
+    }
+    
+    // Also check if we're in a persistent loop situation
+    if (detectLoop() && stuck_counter_ > PANIC_THRESHOLD / 2 && !is_panic_mode_) {
+        is_panic_mode_ = true;
+        panic_counter_ = 0;
+        is_exploring_ = false;
+        is_backtracking_ = false;
+        std::cout << "Agent entering PANIC MODE due to persistent loops!" << std::endl;
+    }
+    
+    // Handle panic mode (highest priority - takes full control)
+    if (is_panic_mode_) {
+        Action action = selectPanicAction(state, valid_actions);
+        panic_counter_++;
+        
+        if (panic_counter_ >= PANIC_DURATION) {
+            is_panic_mode_ = false;
+            panic_counter_ = 0;
+            stuck_counter_ = 0;
+            std::cout << "Panic mode ended, resetting stuck detection" << std::endl;
+        }
+        
+        return action;
+    }
+    
+    // Only allow other modes if not in panic mode
     if (isStuck(current_distance)) {
         if (!is_exploring_ && !is_backtracking_) {
             // Start exploration mode
             is_exploring_ = true;
             exploration_steps_ = 0;
-            stuck_counter_ = 0;
+            // Don't reset stuck_counter_ here - let it accumulate to trigger panic mode
             std::cout << "Agent is stuck, starting exploration mode" << std::endl;
         }
     }
     
     // Handle exploration mode
     if (is_exploring_) {
-        Action action = selectExplorationAction(state);
+        Action action = selectExplorationAction(state, valid_actions);
         exploration_steps_++;
         
         if (exploration_steps_ >= EXPLORATION_DURATION) {
@@ -50,16 +91,16 @@ Action QLearningAgent::selectAction(const Observation& obs) {
             backtrack_path_.clear();
             std::cout << "Backtracking completed, returning to normal mode" << std::endl;
         } else {
-            Action action = selectBacktrackAction(obs.position, obs.heading);
+            Action action = selectBacktrackAction(obs.position, obs.heading, valid_actions);
             return action;
         }
     }
     
-    // Normal Q-learning action selection
+    // Normal Q-learning action selection with valid action filtering
     if (epsilon_ > 0.0f && (static_cast<float>(rand()) / RAND_MAX) < epsilon_) {
-        return epsilonGreedyAction(state);
+        return epsilonGreedyAction(state, valid_actions);
     } else {
-        return greedyAction(state);
+        return greedyAction(state, valid_actions);
     }
 }
 
@@ -85,7 +126,7 @@ void QLearningAgent::updatePolicy(const Observation& obs, Action action,
     }
     
     // Check if we need to start backtracking
-    if (stuck_counter_ > STUCK_THRESHOLD && !is_backtracking_ && !is_exploring_) {
+    if (stuck_counter_ > STUCK_THRESHOLD && !is_backtracking_ && !is_exploring_ && !is_panic_mode_) {
         is_backtracking_ = true;
         std::cout << "Starting backtracking mode" << std::endl;
     }
@@ -100,6 +141,8 @@ void QLearningAgent::reset() {
     exploration_steps_ = 0;
     is_backtracking_ = false;
     backtrack_path_.clear();
+    is_panic_mode_ = false;
+    panic_counter_ = 0;
 }
 
 void QLearningAgent::updateQValue(const QState& state, Action action, 
@@ -174,14 +217,15 @@ QState QLearningAgent::discretizeState(const Observation& obs) const {
     return state;
 }
 
-Action QLearningAgent::epsilonGreedyAction(const QState& state) {
+Action QLearningAgent::epsilonGreedyAction(const QState& state, const std::vector<Action>& valid_actions) {
     // Random action for exploration
-    std::vector<Action> actions = {Action::THROTTLE_FORWARD, Action::YAW_LEFT, 
-                                   Action::YAW_RIGHT, Action::IDLE};
-    return actions[rand() % actions.size()];
+    if (valid_actions.empty()) {
+        return Action::IDLE; // Fallback if no valid actions
+    }
+    return valid_actions[rand() % valid_actions.size()];
 }
 
-Action QLearningAgent::greedyAction(const QState& state) {
+Action QLearningAgent::greedyAction(const QState& state, const std::vector<Action>& valid_actions) {
     // Best action based on Q-values
     initializeQValue(state);
     
@@ -251,7 +295,7 @@ bool QLearningAgent::detectLoop() const {
         return false;
     }
     
-    // Check for repeated patterns in recent history
+    // Check for repeated patterns in recent history - be more sensitive
     int recent_size = std::min(LOOP_DETECTION_WINDOW, static_cast<int>(path_history_.size()));
     
     for (int i = 0; i < recent_size - 1; ++i) {
@@ -260,13 +304,14 @@ bool QLearningAgent::detectLoop() const {
             const auto& pos2 = path_history_[path_history_.size() - 1 - j].position;
             
             float distance = cv::norm(pos1 - pos2);
-            if (distance < grid_resolution_) {
+            // Reduce threshold to detect smaller loops
+            if (distance < grid_resolution_ * 0.8f) {
                 return true; // Potential loop detected
             }
         }
     }
     
-    // Check for circular movement patterns
+    // Check for circular movement patterns - be more sensitive
     if (path_history_.size() >= LOOP_DETECTION_WINDOW) {
         cv::Point2f center(0, 0);
         float total_radius = 0.0f;
@@ -282,14 +327,15 @@ bool QLearningAgent::detectLoop() const {
         }
         float avg_radius = total_radius / LOOP_DETECTION_WINDOW;
         
-        // Check if positions form a roughly circular pattern
-        if (avg_radius > MIN_CIRCULAR_RADIUS && avg_radius < MAX_CIRCULAR_RADIUS) {
+        // Check if positions form a roughly circular pattern - be more sensitive
+        if (avg_radius > MIN_CIRCULAR_RADIUS * 0.8f && avg_radius < MAX_CIRCULAR_RADIUS * 1.2f) {
             // Check if the path is roughly circular by comparing start and end positions
             cv::Point2f start_pos = path_history_[path_history_.size() - LOOP_DETECTION_WINDOW].position;
             cv::Point2f end_pos = path_history_.back().position;
             float start_end_distance = cv::norm(start_pos - end_pos);
             
-            if (start_end_distance < avg_radius * CIRCULAR_MOVEMENT_THRESHOLD) {
+            // Reduce threshold to detect more circular patterns
+            if (start_end_distance < avg_radius * CIRCULAR_MOVEMENT_THRESHOLD * 1.2f) {
                 return true; // Circular movement detected
             }
         }
@@ -309,12 +355,12 @@ bool QLearningAgent::isStuck(float current_distance) const {
         return true;
     }
     
-    // Check for loops
+    // Check for loops - this is the most important indicator
     if (detectLoop()) {
         return true;
     }
     
-    // Check if we're oscillating in a small area
+    // Check if we're oscillating in a small area - be more lenient
     if (path_history_.size() >= LOOP_DETECTION_WINDOW) {
         float total_area = 0.0f;
         cv::Point2f center(0, 0);
@@ -332,34 +378,50 @@ bool QLearningAgent::isStuck(float current_distance) const {
         }
         
         float avg_area = total_area / LOOP_DETECTION_WINDOW;
-        if (avg_area < grid_resolution_ * 2) {
-            return true; // Oscillating in small area
+        // Be more lenient - only consider stuck if oscillating in very small area
+        if (avg_area < grid_resolution_ * 1.5f) {
+            return true; // Oscillating in very small area
         }
+    }
+    
+    // Additional check: if we're very close to goal but not making progress, don't trigger stuck
+    if (current_distance < 50.0f) {
+        return false;
     }
     
     return false;
 }
 
-Action QLearningAgent::selectExplorationAction(const QState& state) {
-    // Use more aggressive exploration when stuck
-    std::vector<Action> actions = {Action::THROTTLE_FORWARD, Action::YAW_LEFT, 
-                                   Action::YAW_RIGHT, Action::IDLE};
+Action QLearningAgent::selectExplorationAction(const QState& state, const std::vector<Action>& valid_actions) {
+    // Use more balanced exploration when stuck, avoiding circular patterns
+    if (valid_actions.empty()) {
+        return Action::IDLE; // Fallback if no valid actions
+    }
     
-    // Bias towards turning actions to escape loops
-    if (exploration_steps_ < EXPLORATION_DURATION / 2) {
-        // First half: focus on turning to escape loops
-        std::vector<Action> turn_actions = {Action::YAW_LEFT, Action::YAW_RIGHT, 
-                                           Action::YAW_LEFT, Action::YAW_RIGHT, Action::IDLE};
-        return turn_actions[rand() % turn_actions.size()];
-    } else {
-        // Second half: more balanced exploration with preference for unexplored areas
+    // Check if we're in a circular pattern and need to break out
+    if (exploration_steps_ < EXPLORATION_DURATION / 3) {
+        // First third: gentle exploration with reduced turning bias
+        // Filter actions to only use valid ones
+        std::vector<Action> gentle_actions;
+        for (const auto& action : {Action::THROTTLE_FORWARD, Action::THROTTLE_FORWARD,
+                                  Action::YAW_LEFT, Action::YAW_RIGHT, Action::IDLE}) {
+            if (std::find(valid_actions.begin(), valid_actions.end(), action) != valid_actions.end()) {
+                gentle_actions.push_back(action);
+            }
+        }
+        
+        if (!gentle_actions.empty()) {
+            return gentle_actions[rand() % gentle_actions.size()];
+        }
+    } else if (exploration_steps_ < 2 * EXPLORATION_DURATION / 3) {
+        // Middle third: more balanced exploration
         if (!path_history_.empty()) {
             cv::Point2f current_pos = path_history_.back().position;
             
             // Check which directions lead to less visited areas
             std::vector<Action> preferred_actions;
             
-            // Try to find unexplored directions
+            // Try to find unexplored directions with preference for forward movement
             for (int i = 0; i < 8; ++i) {
                 float angle = i * M_PI / 4.0f;
                 cv::Point2f test_pos = current_pos + cv::Point2f(
@@ -370,11 +432,15 @@ Action QLearningAgent::selectExplorationAction(const QState& state) {
                 auto test_grid = worldToGrid(test_pos);
                 if (visited_cells_.find(test_grid) == visited_cells_.end()) {
                     // Unexplored area, prefer actions that move in this direction
-                    if (std::abs(angle) < 0.5f) {
+                    if (std::abs(angle) < 0.5f && 
+                        std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
                         preferred_actions.push_back(Action::THROTTLE_FORWARD);
-                    } else if (angle > 0) {
+                        preferred_actions.push_back(Action::THROTTLE_FORWARD); // Double weight for forward
+                    } else if (angle > 0 && 
+                               std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
                         preferred_actions.push_back(Action::YAW_LEFT);
-                    } else {
+                    } else if (angle < 0 && 
+                               std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
                         preferred_actions.push_back(Action::YAW_RIGHT);
                     }
                 }
@@ -385,11 +451,36 @@ Action QLearningAgent::selectExplorationAction(const QState& state) {
             }
         }
         
-        return actions[rand() % actions.size()];
+        // Fallback to valid actions
+        return valid_actions[rand() % valid_actions.size()];
+    } else {
+        // Final third: aggressive exploration to escape loops
+        // Use a more random approach but still avoid pure circular patterns
+        std::vector<Action> escape_actions;
+        for (const auto& action : {Action::THROTTLE_FORWARD, Action::THROTTLE_FORWARD,
+                                  Action::YAW_LEFT, Action::YAW_RIGHT, Action::IDLE}) {
+            if (std::find(valid_actions.begin(), valid_actions.end(), action) != valid_actions.end()) {
+                escape_actions.push_back(action);
+            }
+        }
+        
+        if (escape_actions.empty()) {
+            return valid_actions[rand() % valid_actions.size()];
+        }
+        
+        // Add some randomness to break out of patterns
+        if (rand() % 100 < 30) { // 30% chance for random action
+            return valid_actions[rand() % valid_actions.size()];
+        }
+        
+        return escape_actions[rand() % escape_actions.size()];
     }
+    
+    // Final fallback
+    return valid_actions[rand() % valid_actions.size()];
 }
 
-Action QLearningAgent::selectBacktrackAction(const cv::Point2f& current_pos, float current_heading) {
+Action QLearningAgent::selectBacktrackAction(const cv::Point2f& current_pos, float current_heading, const std::vector<Action>& valid_actions) {
     if (backtrack_path_.empty()) {
         // Generate backtrack path if empty
         updateBacktrackPath(current_pos, current_heading);
@@ -398,7 +489,7 @@ Action QLearningAgent::selectBacktrackAction(const cv::Point2f& current_pos, flo
     if (backtrack_path_.empty()) {
         // Fallback to exploration if no backtrack path
         is_backtracking_ = false;
-        return selectExplorationAction(QState{0, 0, 0});
+        return selectExplorationAction(QState{0, 0, 0}, valid_actions);
     }
     
     // Get target position from backtrack path
@@ -410,16 +501,29 @@ Action QLearningAgent::selectBacktrackAction(const cv::Point2f& current_pos, flo
     while (angle_diff > M_PI) angle_diff -= 2.0f * M_PI;
     while (angle_diff < -M_PI) angle_diff += 2.0f * M_PI;
     
-    // Select action based on angle difference
+    // Select action based on angle difference, but only if it's valid
     if (std::abs(angle_diff) < 0.3f) {
         // Roughly facing target, move forward
-        backtrack_path_.pop_back();
-        return Action::THROTTLE_FORWARD;
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+            backtrack_path_.pop_back();
+            return Action::THROTTLE_FORWARD;
+        }
     } else if (angle_diff > 0) {
-        return Action::YAW_LEFT;
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT;
+        }
     } else {
-        return Action::YAW_RIGHT;
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT;
+        }
     }
+    
+    // If preferred action is not valid, fall back to a valid action
+    if (!valid_actions.empty()) {
+        return valid_actions[rand() % valid_actions.size()];
+    }
+    
+    return Action::IDLE;
 }
 
 void QLearningAgent::updateBacktrackPath(const cv::Point2f& position, float current_heading) {
@@ -499,6 +603,8 @@ void QLearningAgent::resetStuckDetection() {
     exploration_steps_ = 0;
     is_backtracking_ = false;
     backtrack_path_.clear();
+    is_panic_mode_ = false;
+    panic_counter_ = 0;
 }
 
 bool QLearningAgent::shouldTerminateBacktracking(float current_distance) const {
@@ -541,6 +647,8 @@ std::string QLearningAgent::getDebugInfo() const {
     info += "  Exploration Steps: " + std::to_string(exploration_steps_) + "\n";
     info += "  Is Backtracking: " + std::string(is_backtracking_ ? "Yes" : "No") + "\n";
     info += "  Backtrack Path Size: " + std::to_string(backtrack_path_.size()) + "\n";
+    info += "  Is Panic Mode: " + std::string(is_panic_mode_ ? "Yes" : "No") + "\n";
+    info += "  Panic Counter: " + std::to_string(panic_counter_) + "\n";
     info += "  Q-Table Size: " + std::to_string(q_table_.size()) + "\n";
     info += "  Average Q-Value: " + std::to_string(getAverageQValue()) + "\n";
     
@@ -566,6 +674,30 @@ std::string QLearningAgent::getDebugInfo() const {
     }
     
     return info;
+}
+
+Action QLearningAgent::selectPanicAction(const QState& state, const std::vector<Action>& valid_actions) {
+    if (valid_actions.empty()) {
+        return Action::IDLE;
+    }
+    
+    // In panic mode, use completely random actions to break out of any patterns
+    // This is the most aggressive escape mechanism
+    Action action = valid_actions[rand() % valid_actions.size()];
+    
+    // Occasionally force a specific action type to break patterns
+    if (panic_counter_ % 10 == 0) {
+        // Every 10 steps, try to force a different action type
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
+            action = Action::THROTTLE_FORWARD;
+        } else if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            action = Action::YAW_LEFT;
+        } else if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            action = Action::YAW_RIGHT;
+        }
+    }
+    
+    return action;
 }
 
 } // namespace agent

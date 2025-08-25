@@ -38,6 +38,7 @@ public:
     bool isEmergencyStop() const;
     void emergencyStop();
     bool isWithinConstraints(float throttle, float yaw_rate) const;
+    bool wouldCollide(float throttle, float yaw_rate, float dt) const;
     
     // Sensor simulation
     cv::Mat getTopDownView(const World& world, int view_size = 200) const;

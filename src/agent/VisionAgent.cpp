@@ -7,7 +7,7 @@ VisionAgent::VisionAgent(const AgentConfig& config)
     frame_buffer_.max_frames = config.observation_stack;
 }
 
-Action VisionAgent::selectAction(const Observation& obs) {
+Action VisionAgent::selectAction(const Observation& obs, const sim::Drone& drone) {
     // TODO: Implement vision-based action selection
     return Action::IDLE;
 }

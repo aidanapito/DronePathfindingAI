@@ -42,7 +42,7 @@ public:
     virtual ~Agent() = default;
 
     // Core interface
-    virtual Action selectAction(const Observation& obs) = 0;
+    virtual Action selectAction(const Observation& obs, const sim::Drone& drone) = 0;
     virtual void updatePolicy(const Observation& obs, Action action, 
                             float reward, const Observation& next_obs, bool done) = 0;
     virtual void reset() = 0;

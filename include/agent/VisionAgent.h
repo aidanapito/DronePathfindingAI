@@ -27,7 +27,7 @@ public:
     ~VisionAgent() override = default;
 
     // Agent interface implementation
-    Action selectAction(const Observation& obs) override;
+    Action selectAction(const Observation& obs, const sim::Drone& drone) override;
     void updatePolicy(const Observation& obs, Action action, 
                      float reward, const Observation& next_obs, bool done) override;
     void reset() override;

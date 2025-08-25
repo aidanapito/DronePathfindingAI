@@ -44,7 +44,7 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     agent::Observation obs = getCurrentObservation();
     
     // Agent selects action
-    agent::Action action = agent->selectAction(obs);
+    agent::Action action = agent->selectAction(obs, *drone_);
     
     // TODO: Execute action and get next observation
     agent::Observation next_obs = obs; // Placeholder

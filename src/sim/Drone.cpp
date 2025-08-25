@@ -69,6 +69,22 @@ bool Drone::isWithinConstraints(float throttle, float yaw_rate) const {
     return true;
 }
 
+bool Drone::wouldCollide(float throttle, float yaw_rate, float dt) const {
+    if (!world_) return false;
+    
+    // Simulate the proposed movement
+    float new_heading = state_.heading + yaw_rate * dt;
+    float new_velocity = throttle * constraints_.max_velocity;
+    
+    // Calculate new position
+    float dx = new_velocity * cos(new_heading) * dt;
+    float dy = new_velocity * sin(new_heading) * dt;
+    cv::Point2f new_position = state_.position + cv::Point2f(dx, dy);
+    
+    // Check if new position would collide with obstacles
+    return world_->checkCollision(new_position, constraints_.safety_margin);
+}
+
 cv::Mat Drone::getTopDownView(const World& world, int view_size) const {
     // TODO: Implement top-down view rendering
     cv::Mat view(view_size, view_size, CV_8UC3, cv::Scalar(128, 128, 128));
