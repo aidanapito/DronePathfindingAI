@@ -13,89 +13,49 @@ QLearningAgent::QLearningAgent(const AgentConfig& config)
       is_panic_mode_(false), panic_counter_(0), is_goal_seeking_(false), wall_following_steps_(0) {
 }
 
-Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& drone) {
-    QState state = discretizeState(obs);
-    
-    // Get valid actions early so they can be used throughout the method
-    std::vector<Action> valid_actions = getValidActions(drone);
+Action QLearningAgent::selectAction(const Observation& obs, const std::vector<Action>& valid_actions) {
     if (valid_actions.empty()) {
-        return Action::IDLE; // Fallback
+        return Action::IDLE;
     }
     
-    // Check if we're stuck and need special handling
+    QState state = discretizeState(obs);
     float current_distance = obs.distance_to_goal;
     
-    // Check if we need to enter panic mode
-    if (stuck_counter_ > PANIC_THRESHOLD && !is_panic_mode_) {
-        is_panic_mode_ = true;
-        panic_counter_ = 0;
-        is_exploring_ = false;
-        is_backtracking_ = false;
-        std::cout << "Agent entering PANIC MODE - extreme stuck situation!" << std::endl;
+    // Update stuck detection
+    updateStuckDetection(current_distance);
+    
+    // Enhanced goal-seeking behavior
+    if (current_distance < 100.0f && !is_panic_mode_) {
+        // Close to goal - be more aggressive
+        is_goal_seeking_ = true;
+        epsilon_ = std::max(0.05f, epsilon_ * 0.8f); // Reduce exploration near goal
+    } else if (current_distance > 200.0f) {
+        // Far from goal - increase exploration
+        epsilon_ = std::min(0.3f, epsilon_ * 1.1f);
+        is_goal_seeking_ = false;
     }
     
-    // Also check if we're in a persistent loop situation
-    if (detectLoop() && stuck_counter_ > PANIC_THRESHOLD / 2 && !is_panic_mode_) {
-        is_panic_mode_ = true;
-        panic_counter_ = 0;
-        is_exploring_ = false;
-        is_backtracking_ = false;
-        std::cout << "Agent entering PANIC MODE due to persistent loops!" << std::endl;
-    }
-    
-    // Handle panic mode (highest priority - takes full control)
+    // Handle panic mode (when severely stuck)
     if (is_panic_mode_) {
-        Action action = selectPanicAction(state, valid_actions);
+        Action action = selectPanicAction(obs, valid_actions);
         panic_counter_++;
         
-        if (panic_counter_ >= PANIC_DURATION) {
+        if (panic_counter_ > 50) {
             is_panic_mode_ = false;
             panic_counter_ = 0;
-            stuck_counter_ = 0;
+            resetStuckDetection();
             std::cout << "Panic mode ended, resetting stuck detection" << std::endl;
         }
         
         return action;
     }
     
-    // Check if we should enter goal-seeking mode (when not in immediate danger)
-    if (!is_panic_mode_ && !is_exploring_ && !is_backtracking_ && stuck_counter_ < STUCK_THRESHOLD / 3) {
-        // If we're not in immediate danger, try to navigate toward the goal
-        is_goal_seeking_ = true;
-    }
-    
-    // Handle goal-seeking mode (higher priority than exploration, lower than panic)
-    if (is_goal_seeking_ && !is_panic_mode_) {
-        Action action = selectGoalSeekingAction(state, valid_actions);
-        
-        // Exit goal-seeking mode if we're making good progress or if we hit obstacles
-        if (current_distance < last_best_distance_ - PROGRESS_THRESHOLD) {
-            is_goal_seeking_ = false;
-            resetStuckDetection();
-        } else if (stuck_counter_ > STUCK_THRESHOLD / 2) {
-            is_goal_seeking_ = false;
-        }
-        
-        return action;
-    }
-    
-    // Only allow other modes if not in panic mode
-    if (isStuck(current_distance)) {
-        if (!is_exploring_ && !is_backtracking_ && !is_panic_mode_ && !is_goal_seeking_) {
-            // Start exploration mode
-            is_exploring_ = true;
-            exploration_steps_ = 0;
-            // Don't reset stuck_counter_ here - let it accumulate to trigger panic mode
-            std::cout << "Agent is stuck, starting exploration mode" << std::endl;
-        }
-    }
-    
     // Handle exploration mode
     if (is_exploring_) {
-        Action action = selectExplorationAction(state, valid_actions);
+        Action action = selectExplorationAction(obs, valid_actions);
         exploration_steps_++;
         
-        if (exploration_steps_ >= EXPLORATION_DURATION) {
+        if (exploration_steps_ > 20 || shouldTerminateExploration(current_distance)) {
             is_exploring_ = false;
             exploration_steps_ = 0;
             std::cout << "Exploration mode ended" << std::endl;
@@ -106,7 +66,6 @@ Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& dr
     
     // Handle backtracking mode
     if (is_backtracking_) {
-        // Check if we should terminate backtracking
         if (shouldTerminateBacktracking(current_distance)) {
             is_backtracking_ = false;
             backtrack_path_.clear();
@@ -117,7 +76,7 @@ Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& dr
         }
     }
     
-    // Normal Q-learning action selection with valid action filtering
+    // Enhanced Q-learning action selection with goal guidance
     if (epsilon_ > 0.0f && (static_cast<float>(rand()) / RAND_MAX) < epsilon_) {
         return epsilonGreedyAction(state, valid_actions);
     } else {
@@ -659,31 +618,64 @@ void QLearningAgent::resetStuckDetection() {
     wall_following_steps_ = 0;
 }
 
-bool QLearningAgent::shouldTerminateBacktracking(float current_distance) const {
-    // Terminate if we've made significant progress
-    if (current_distance < last_best_distance_ - PROGRESS_THRESHOLD * 2) {
+void QLearningAgent::updateStuckDetection(float current_distance) {
+    // Check if we need to enter panic mode
+    if (stuck_counter_ > PANIC_THRESHOLD && !is_panic_mode_) {
+        is_panic_mode_ = true;
+        panic_counter_ = 0;
+        is_exploring_ = false;
+        is_backtracking_ = false;
+        std::cout << "Agent entering PANIC MODE - extreme stuck situation!" << std::endl;
+    }
+    
+    // Check if we're in a persistent loop situation
+    if (detectLoop() && stuck_counter_ > PANIC_THRESHOLD / 2 && !is_panic_mode_) {
+        is_panic_mode_ = true;
+        panic_counter_ = 0;
+        is_exploring_ = false;
+        is_backtracking_ = false;
+        std::cout << "Agent entering PANIC MODE due to persistent loops!" << std::endl;
+    }
+    
+    // Check if we should start exploration
+    if (isStuck(current_distance) && !is_exploring_ && !is_backtracking_ && !is_panic_mode_) {
+        is_exploring_ = true;
+        exploration_steps_ = 0;
+        std::cout << "Agent is stuck, starting exploration mode" << std::endl;
+    }
+    
+    // Check if we need to start backtracking
+    if (stuck_counter_ > STUCK_THRESHOLD && !is_backtracking_ && !is_exploring_ && !is_panic_mode_) {
+        is_backtracking_ = true;
+        std::cout << "Starting backtracking mode" << std::endl;
+    }
+}
+
+bool QLearningAgent::shouldTerminateExploration(float current_distance) {
+    // Terminate exploration if we're making good progress
+    if (current_distance < last_best_distance_ - PROGRESS_THRESHOLD) {
+        resetStuckDetection();
         return true;
     }
     
-    // Terminate if backtracking path is empty
-    if (backtrack_path_.empty()) {
+    // Terminate exploration if we're getting worse
+    if (current_distance > last_best_distance_ + 50.0f) {
         return true;
     }
     
-    // Terminate if we've been backtracking for too long without progress
-    if (stuck_counter_ > STUCK_THRESHOLD * 2) {
+    return false;
+}
+
+bool QLearningAgent::shouldTerminateBacktracking(float current_distance) {
+    // Terminate backtracking if we're making progress
+    if (current_distance < last_best_distance_ - PROGRESS_THRESHOLD) {
+        resetStuckDetection();
         return true;
     }
     
-    // Terminate if we're close to the backtracking target
-    if (!path_history_.empty() && !backtrack_path_.empty()) {
-        cv::Point2f current_pos = path_history_.back().position;
-        cv::Point2f target = backtrack_path_.back();
-        float distance_to_target = cv::norm(current_pos - target);
-        
-        if (distance_to_target < grid_resolution_) {
-            return true;
-        }
+    // Terminate backtracking if we've been doing it too long
+    if (backtrack_path_.size() > 20) {
+        return true;
     }
     
     return false;
@@ -756,28 +748,37 @@ cv::Point2f QLearningAgent::getNextWaypointDirection(const cv::Point2f& current_
     return direction;
 }
 
-Action QLearningAgent::selectPanicAction(const QState& state, const std::vector<Action>& valid_actions) {
-    if (valid_actions.empty()) {
-        return Action::IDLE;
-    }
+Action QLearningAgent::selectPanicAction(const Observation& obs, const std::vector<Action>& valid_actions) {
+    // Panic mode: use aggressive goal-seeking behavior
+    float goal_direction = obs.goal_direction;
+    float current_heading = obs.heading;
     
-    // In panic mode, use completely random actions to break out of any patterns
-    // This is the most aggressive escape mechanism
-    Action action = valid_actions[rand() % valid_actions.size()];
+    // Calculate heading difference
+    float heading_diff = goal_direction - current_heading;
+    while (heading_diff > M_PI) heading_diff -= 2 * M_PI;
+    while (heading_diff < -M_PI) heading_diff += 2 * M_PI;
     
-    // Occasionally force a specific action type to break patterns
-    if (panic_counter_ % 10 == 0) {
-        // Every 10 steps, try to force a different action type
+    // Prioritize actions that align with goal
+    if (std::abs(heading_diff) < 0.5f) {
+        // Well aligned - try to move forward
         if (std::find(valid_actions.begin(), valid_actions.end(), Action::THROTTLE_FORWARD) != valid_actions.end()) {
-            action = Action::THROTTLE_FORWARD;
-        } else if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
-            action = Action::YAW_LEFT;
-        } else if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
-            action = Action::YAW_RIGHT;
+            return Action::THROTTLE_FORWARD;
         }
     }
     
-    return action;
+    // Turn toward goal
+    if (heading_diff > 0.2f) {
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_LEFT) != valid_actions.end()) {
+            return Action::YAW_LEFT;
+        }
+    } else if (heading_diff < -0.2f) {
+        if (std::find(valid_actions.begin(), valid_actions.end(), Action::YAW_RIGHT) != valid_actions.end()) {
+            return Action::YAW_RIGHT;
+        }
+    }
+    
+    // Fallback to random valid action
+    return valid_actions[rand() % valid_actions.size()];
 }
 
 Action QLearningAgent::selectGoalSeekingAction(const QState& state, const std::vector<Action>& valid_actions) {

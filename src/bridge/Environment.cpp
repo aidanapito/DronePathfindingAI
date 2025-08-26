@@ -552,9 +552,21 @@ agent::Observation Environment::createObservation() const {
 }
 
 float Environment::getGoalReward() const {
-    if (drone_ && world_ && drone_->hasReachedGoal(world_->getGoalPosition())) {
-        return config_.goal_reward;
+    if (!drone_ || !world_) return 0.0f;
+    
+    cv::Point2f current_pos = drone_->getState().position;
+    cv::Point2f goal_pos = world_->getGoalPosition();
+    float current_distance = cv::norm(current_pos - goal_pos);
+    
+    // Strong goal reward when very close
+    if (current_distance < 20.0f) {
+        return 500.0f; // Massive reward for reaching goal
+    } else if (current_distance < 50.0f) {
+        return 100.0f; // High reward for being very close
+    } else if (current_distance < 100.0f) {
+        return 50.0f;  // Good reward for being close
     }
+    
     return 0.0f;
 }
 
@@ -566,11 +578,83 @@ float Environment::getCollisionPenalty() const {
 }
 
 float Environment::getProgressReward() const {
-    if (drone_ && world_) {
-        float progress = drone_->getProgressToGoal(episode_start_, episode_goal_);
-        return progress * config_.progress_reward;
+    if (!drone_ || !world_ || path_trace_.size() < 2) return 0.0f;
+    
+    cv::Point2f current_pos = drone_->getState().position;
+    cv::Point2f goal_pos = world_->getGoalPosition();
+    float current_distance = cv::norm(current_pos - goal_pos);
+    
+    // Calculate progress from start
+    float start_distance = cv::norm(episode_start_ - goal_pos);
+    float progress = start_distance - current_distance;
+    
+    // Enhanced progress reward
+    if (progress > 0) {
+        // Making progress toward goal
+        return progress * 0.5f; // Reward proportional to progress
+    } else {
+        // Moving away from goal
+        return progress * 0.2f; // Smaller penalty for moving away
     }
+}
+
+float Environment::getDirectionalReward() const {
+    if (!drone_ || !world_ || path_trace_.size() < 2) return 0.0f;
+    
+    cv::Point2f current_pos = path_trace_.back();
+    cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+    cv::Point2f goal_pos = world_->getGoalPosition();
+    
+    cv::Point2f movement = current_pos - prev_pos;
+    float movement_magnitude = cv::norm(movement);
+    
+    if (movement_magnitude > 0.1f) {
+        cv::Point2f goal_direction = goal_pos - prev_pos;
+        float goal_distance = cv::norm(goal_direction);
+        
+        if (goal_distance > 0.1f) {
+            goal_direction = goal_direction * (1.0f / goal_distance);
+            cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
+            float alignment = goal_direction.dot(normalized_movement);
+            
+            // Enhanced directional rewards
+            if (alignment > 0.9f) {
+                return 5.0f;  // Excellent alignment
+            } else if (alignment > 0.7f) {
+                return 3.0f;  // Good alignment
+            } else if (alignment > 0.3f) {
+                return 1.0f;  // Moderate alignment
+            } else if (alignment < -0.5f) {
+                return -2.0f; // Moving away from goal
+            }
+        }
+    }
+    
     return 0.0f;
+}
+
+float Environment::getPathFollowingReward() const {
+    if (!use_pathfinding_ || optimal_path_.empty()) return 0.0f;
+    
+    float path_distance = getDistanceToPath();
+    float reward = 0.0f;
+    
+    // Reward for staying close to optimal path
+    if (path_distance < 20.0f) {
+        reward += 2.0f; // Close to path
+    } else if (path_distance < 50.0f) {
+        reward += 1.0f; // Moderately close to path
+    } else {
+        reward -= std::min(path_distance * 0.1f, 10.0f); // Penalty for straying
+    }
+    
+    // Additional reward for waypoint progress
+    if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
+        float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
+        reward += waypoint_progress * 20.0f; // Significant reward for waypoint progress
+    }
+    
+    return reward;
 }
 
 float Environment::getTimePenalty() const {

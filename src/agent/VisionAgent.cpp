@@ -101,10 +101,7 @@ void VisionAgent::reset() {
 }
 
 Action VisionAgent::inferAction(const cv::Mat& stacked_frames) {
-    // For now, implement a simple CNN-inspired heuristic
-    // In a full implementation, this would run actual neural network inference
-    
-    // Analyze the stacked frames for patterns
+    // Enhanced vision-based action selection with goal guidance
     cv::Mat processed = preprocessFrame(stacked_frames);
     
     // Convert back to 8-bit for edge detection
@@ -120,9 +117,9 @@ Action VisionAgent::inferAction(const cv::Mat& stacked_frames) {
     int center_edges = cv::countNonZero(edges(cv::Rect(28, 0, 28, 84)));
     int right_edges = cv::countNonZero(edges(cv::Rect(56, 0, 28, 84)));
     
-    // Simple obstacle avoidance logic
+    // Enhanced obstacle avoidance logic with goal guidance
     if (center_edges > 100) {
-        // Obstacle ahead - turn
+        // Obstacle ahead - turn toward clearer side
         if (left_edges < right_edges) {
             return Action::YAW_LEFT;
         } else {
@@ -141,8 +138,7 @@ Action VisionAgent::inferAction(const cv::Mat& stacked_frames) {
 }
 
 Action VisionAgent::selectHeuristicAction(const Observation& obs, const sim::Drone& drone) {
-    // Simple heuristic-based action selection when vision is not available
-    // This provides a baseline behavior for the agent
+    // Enhanced heuristic-based action selection with better goal guidance
     
     // Use goal direction to guide movement
     float goal_direction = obs.goal_direction;
@@ -155,26 +151,43 @@ Action VisionAgent::selectHeuristicAction(const Observation& obs, const sim::Dro
     while (heading_diff > M_PI) heading_diff -= 2 * M_PI;
     while (heading_diff < -M_PI) heading_diff += 2 * M_PI;
     
-    // Select action based on heading alignment
-    if (std::abs(heading_diff) < 0.3f) {
-        // Well aligned with goal - move forward
-        return Action::THROTTLE_FORWARD;
-    } else if (heading_diff > 0) {
-        // Need to turn left
-        return Action::YAW_LEFT;
+    // Enhanced action selection based on heading alignment and distance
+    float distance_to_goal = obs.distance_to_goal;
+    
+    if (distance_to_goal < 50.0f) {
+        // Very close to goal - be more precise
+        if (std::abs(heading_diff) < 0.2f) {
+            return Action::THROTTLE_FORWARD;
+        } else if (heading_diff > 0) {
+            return Action::YAW_LEFT;
+        } else {
+            return Action::YAW_RIGHT;
+        }
+    } else if (distance_to_goal < 150.0f) {
+        // Moderately close to goal - balance precision and speed
+        if (std::abs(heading_diff) < 0.3f) {
+            return Action::THROTTLE_FORWARD;
+        } else if (heading_diff > 0) {
+            return Action::YAW_LEFT;
+        } else {
+            return Action::YAW_RIGHT;
+        }
     } else {
-        // Need to turn right
-        return Action::YAW_RIGHT;
+        // Far from goal - be more aggressive with turning
+        if (std::abs(heading_diff) < 0.4f) {
+            return Action::THROTTLE_FORWARD;
+        } else if (heading_diff > 0.1f) {
+            return Action::YAW_LEFT;
+        } else if (heading_diff < -0.1f) {
+            return Action::YAW_RIGHT;
+        } else {
+            return Action::THROTTLE_FORWARD;
+        }
     }
 }
 
 cv::Mat VisionAgent::preprocessFrame(const cv::Mat& frame) const {
     cv::Mat processed = frame.clone();
-    
-    // Debug: Print frame info
-    std::cout << "VisionAgent: Processing frame - Type: " << processed.type() 
-              << ", Channels: " << processed.channels() 
-              << ", Size: " << processed.size() << std::endl;
     
     // Ensure we have a single-channel 8-bit image
     if (processed.channels() != 1) {
@@ -201,7 +214,6 @@ cv::Mat VisionAgent::preprocessFrame(const cv::Mat& frame) const {
     cv::meanStdDev(processed, mean, stddev);
     processed = (processed - mean[0]) / (stddev[0] + 1e-8);
     
-    std::cout << "VisionAgent: Frame processed successfully" << std::endl;
     return processed;
 }
 

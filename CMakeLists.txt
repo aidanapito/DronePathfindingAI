@@ -129,6 +129,9 @@ add_executable(debug_episode_loop src/debug_episode_loop.cpp)
 # Create debug reset sequence test executable
 add_executable(debug_reset_sequence src/debug_reset_sequence.cpp)
 
+# Create 3D demo executable
+add_executable(3d_demo src/3d_demo.cpp)
+
 # Link libraries for library target
 target_link_libraries(${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
@@ -207,6 +210,13 @@ target_link_libraries(debug_episode_loop
 
 # Link libraries for debug reset sequence test executable
 target_link_libraries(debug_reset_sequence
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for 3D demo executable
+target_link_libraries(3d_demo
     ${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
     ${EIGEN3_LIBS}

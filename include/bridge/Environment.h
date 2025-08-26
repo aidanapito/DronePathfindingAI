@@ -13,7 +13,10 @@ struct EpisodeResult {
     float total_reward;
     bool success;
     float final_distance;
-    std::vector<cv::Point2f> path_trace;
+    std::vector<cv::Point3f> path_trace;        // 3D path trace
+    std::vector<cv::Point2f> path_trace_2d;     // 2D path trace (backward compatibility)
+    float final_altitude;
+    float altitude_error;                        // Difference between final and goal altitude
 };
 
 struct EnvironmentConfig {
@@ -26,9 +29,19 @@ struct EnvironmentConfig {
     // Action execution parameters
     float throttle_scale = 1.0f;        // Scale factor for throttle actions
     float yaw_rate_scale = 1.0f;        // Scale factor for yaw rate actions
+    float pitch_rate_scale = 1.0f;      // Scale factor for pitch rate actions
+    float roll_rate_scale = 1.0f;       // Scale factor for roll rate actions
+    float vertical_thrust_scale = 1.0f; // Scale factor for vertical thrust actions
     bool enable_safety_checks = true;    // Enable collision and constraint checks
     bool enable_action_logging = true;   // Enable action logging for debugging
     int action_log_frequency = 10;       // How often to log actions (steps)
+    
+    // 3D specific parameters
+    bool enable_3d_mode = false;         // Whether to use 3D mode
+    bool enable_3d_pathfinding = false;  // Whether to use 3D pathfinding
+    float max_altitude = 200.0f;         // Maximum allowed altitude
+    float min_altitude = 0.0f;           // Minimum allowed altitude
+    float altitude_safety_margin = 10.0f; // Safety margin for altitude
     
     // Reward shaping
     float goal_reward;
@@ -36,6 +49,8 @@ struct EnvironmentConfig {
     float progress_reward;
     float time_penalty;
     float safety_margin_penalty;
+    float altitude_reward = 1.0f;        // Reward for maintaining good altitude
+    float altitude_penalty = -2.0f;      // Penalty for altitude violations
 };
 
 class Environment {
@@ -63,14 +78,18 @@ public:
     void setAgent(std::shared_ptr<agent::Agent> agent);
     void setWorld(std::shared_ptr<sim::World> world);
     void setDrone(std::shared_ptr<sim::Drone> drone);
+    void set3DMode(bool enable) { config_.enable_3d_mode = enable; }
+    void set3DPathfinding(bool enable) { config_.enable_3d_pathfinding = enable; }
     
     // Statistics
     const std::vector<EpisodeResult>& getEpisodeHistory() const { return episode_history_; }
     float getAverageEpisodeLength() const;
     float getSuccessRate() const;
+    float getAverageAltitudeError() const;
     
     // Pathfinding integration
-    std::vector<cv::Point2f> getOptimalPath() const;
+    std::vector<cv::Point3f> getOptimalPath3D() const;
+    std::vector<cv::Point2f> getOptimalPath() const; // Backward compatibility
     void setUsePathfinding(bool use) { use_pathfinding_ = use; }
     bool getUsePathfinding() const { return use_pathfinding_; }
     void setPathfindingAlgorithm(const std::string& algorithm) { pathfinding_algorithm_ = algorithm; }
@@ -87,6 +106,15 @@ public:
         int blocked_actions = 0;
         int scaled_actions = 0;
         int emergency_stops = 0;
+        
+        // 3D action statistics
+        int pitch_up_actions = 0;
+        int pitch_down_actions = 0;
+        int roll_left_actions = 0;
+        int roll_right_actions = 0;
+        int thrust_up_actions = 0;
+        int thrust_down_actions = 0;
+        int combined_3d_actions = 0;
     };
     ActionStats getActionStats() const { return action_stats_; }
     void printActionStats() const;
@@ -105,6 +133,13 @@ public:
         float speed_reward = 0.0f;
         float proximity_reward = 0.0f;
         float action_reward = 0.0f;
+        
+        // 3D specific rewards
+        float altitude_reward = 0.0f;
+        float altitude_penalty = 0.0f;
+        float vertical_progress_reward = 0.0f;
+        float clearance_reward = 0.0f;
+        
         float total_reward = 0.0f;
     };
     RewardBreakdown getRewardBreakdown() const;
@@ -120,9 +155,10 @@ private:
     int current_step_;
     int episode_count_;
     float cumulative_reward_;
-    std::vector<cv::Point2f> path_trace_;
-    cv::Point2f episode_start_;
-    cv::Point2f episode_goal_;
+    std::vector<cv::Point3f> path_trace_3d_;        // 3D path trace
+    std::vector<cv::Point2f> path_trace_2d_;        // 2D path trace (backward compatibility)
+    cv::Point3f episode_start_;
+    cv::Point3f episode_goal_;
     
     // History
     std::vector<EpisodeResult> episode_history_;
@@ -130,7 +166,8 @@ private:
     // Pathfinding integration
     bool use_pathfinding_;
     std::string pathfinding_algorithm_;
-    std::vector<cv::Point2f> optimal_path_;
+    std::vector<cv::Point3f> optimal_path_3d_;      // 3D optimal path
+    std::vector<cv::Point2f> optimal_path_2d_;      // 2D optimal path (backward compatibility)
     int current_waypoint_index_;
     
     // Action execution statistics
@@ -152,12 +189,26 @@ private:
     float getTimePenalty() const;
     float getSafetyMarginPenalty() const;
     
+    // 3D specific reward components
+    float getAltitudeReward() const;
+    float getVerticalProgressReward() const;
+    float getClearanceReward() const;
+    
     // Pathfinding helpers
     void computeOptimalPath();
+    void computeOptimalPath3D();
     float getDistanceToPath() const;
-    cv::Point2f getNextWaypoint() const;
+    float getDistanceToPath3D() const;
+    cv::Point3f getNextWaypoint3D() const;
+    cv::Point2f getNextWaypoint() const; // Backward compatibility
     bool hasReachedWaypoint() const;
     void updateWaypointProgress();
+    
+    // 3D specific helpers
+    bool is3DMode() const { return config_.enable_3d_mode; }
+    bool is3DPathfindingEnabled() const { return config_.enable_3d_pathfinding; }
+    void update3DActionStats(agent::Action action);
+    float calculate3DDistance(const cv::Point3f& p1, const cv::Point3f& p2) const;
 };
 
 } // namespace bridge
