@@ -23,6 +23,13 @@ struct EnvironmentConfig {
     bool record_video;
     std::string video_output_path;
     
+    // Action execution parameters
+    float throttle_scale = 1.0f;        // Scale factor for throttle actions
+    float yaw_rate_scale = 1.0f;        // Scale factor for yaw rate actions
+    bool enable_safety_checks = true;    // Enable collision and constraint checks
+    bool enable_action_logging = true;   // Enable action logging for debugging
+    int action_log_frequency = 10;       // How often to log actions (steps)
+    
     // Reward shaping
     float goal_reward;
     float collision_penalty;
@@ -62,6 +69,20 @@ public:
     bool getUsePathfinding() const { return use_pathfinding_; }
     void setPathfindingAlgorithm(const std::string& algorithm) { pathfinding_algorithm_ = algorithm; }
     std::string getPathfindingAlgorithm() const { return pathfinding_algorithm_; }
+    
+    // Action execution statistics
+    struct ActionStats {
+        int total_actions = 0;
+        int forward_actions = 0;
+        int left_turn_actions = 0;
+        int right_turn_actions = 0;
+        int idle_actions = 0;
+        int blocked_actions = 0;
+        int scaled_actions = 0;
+        int emergency_stops = 0;
+    };
+    ActionStats getActionStats() const { return action_stats_; }
+    void printActionStats() const;
 
 private:
     EnvironmentConfig config_;
@@ -85,6 +106,9 @@ private:
     std::string pathfinding_algorithm_;
     std::vector<cv::Point2f> optimal_path_;
     int current_waypoint_index_;
+    
+    // Action execution statistics
+    ActionStats action_stats_;
     
     // Helper methods
     float calculateReward() const;

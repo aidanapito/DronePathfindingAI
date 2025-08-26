@@ -102,6 +102,33 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 # Create test executable
 add_executable(test_pathfinding src/test_pathfinding.cpp)
 
+# Create minimal test executable
+add_executable(minimal_test src/minimal_test.cpp)
+
+# Create environment test executable
+add_executable(environment_test src/environment_test.cpp)
+
+# Create pathfinding test executable
+add_executable(pathfinding_test src/pathfinding_test.cpp)
+
+# Create episode test executable
+add_executable(episode_test src/episode_test.cpp)
+
+# Create debug setup test executable
+add_executable(debug_setup src/debug_setup.cpp)
+
+# Create replicate original test executable
+add_executable(replicate_original src/replicate_original.cpp)
+
+# Create debug episode bug test executable
+add_executable(debug_episode_bug src/debug_episode_bug.cpp)
+
+# Create debug episode loop test executable
+add_executable(debug_episode_loop src/debug_episode_loop.cpp)
+
+# Create debug reset sequence test executable
+add_executable(debug_reset_sequence src/debug_reset_sequence.cpp)
+
 # Link libraries for library target
 target_link_libraries(${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
@@ -117,6 +144,69 @@ target_link_libraries(${PROJECT_NAME}
 
 # Link libraries for test executable
 target_link_libraries(test_pathfinding
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for minimal test executable
+target_link_libraries(minimal_test
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for environment test executable
+target_link_libraries(environment_test
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for pathfinding test executable
+target_link_libraries(pathfinding_test
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for episode test executable
+target_link_libraries(episode_test
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for debug setup test executable
+target_link_libraries(debug_setup
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for replicate original test executable
+target_link_libraries(replicate_original
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for debug episode bug test executable
+target_link_libraries(debug_episode_bug
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for debug episode loop test executable
+target_link_libraries(debug_episode_loop
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for debug reset sequence test executable
+target_link_libraries(debug_reset_sequence
     ${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
     ${EIGEN3_LIBS}

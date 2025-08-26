@@ -62,7 +62,7 @@ public:
     Action selectExplorationAction(const QState& state, const std::vector<Action>& valid_actions);
     Action selectBacktrackAction(const cv::Point2f& current_pos, float current_heading, const std::vector<Action>& valid_actions);
     Action selectPanicAction(const QState& state, const std::vector<Action>& valid_actions);
-    Action selectGoalSeekingAction(const Observation& obs, const std::vector<Action>& valid_actions);
+    Action selectGoalSeekingAction(const QState& state, const std::vector<Action>& valid_actions);
     
     // Model persistence
     void saveModel(const std::string& path) override;

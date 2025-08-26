@@ -13,14 +13,42 @@ void Environment::reset() {
     cumulative_reward_ = 0.0f;
     path_trace_.clear();
     
+    // Reset action statistics
+    action_stats_ = ActionStats{};
+    
     if (world_ && drone_) {
-        episode_start_ = drone_->getState().position;
+        // Reset drone to start position
+        cv::Point2f start_pos = world_->getStartPosition();
+        float start_heading = 0.0f;
+        
+        sim::DroneState start_state;
+        start_state.position = start_pos;
+        start_state.heading = start_heading;
+        start_state.velocity = 0.0f;
+        start_state.angular_velocity = 0.0f;
+        
+        drone_->setState(start_state);
+        
+        episode_start_ = start_pos;
         episode_goal_ = world_->getGoalPosition();
+        
+        // Reset agent state
+        if (agent_) {
+            agent_->reset();
+        }
         
         // Compute optimal path if pathfinding is enabled
         if (use_pathfinding_) {
             computeOptimalPath();
+            current_waypoint_index_ = 0; // Reset waypoint progress
         }
+        
+        // Clear path trace and add starting position
+        path_trace_.clear();
+        path_trace_.push_back(start_pos);
+        
+        std::cout << "Environment reset: Drone at (" << start_pos.x << ", " << start_pos.y 
+                  << "), Goal at (" << episode_goal_.x << ", " << episode_goal_.y << ")" << std::endl;
     }
 }
 
@@ -53,8 +81,108 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     // Agent selects action
     agent::Action action = agent->selectAction(obs, *drone_);
     
-    // TODO: Execute action and get next observation
-    agent::Observation next_obs = obs; // Placeholder
+    // Log selected action for debugging
+    std::string action_name;
+    switch (action) {
+        case agent::Action::THROTTLE_FORWARD: action_name = "FORWARD"; break;
+        case agent::Action::YAW_LEFT: action_name = "TURN_LEFT"; break;
+        case agent::Action::YAW_RIGHT: action_name = "TURN_RIGHT"; break;
+        case agent::Action::IDLE: action_name = "IDLE"; break;
+        default: action_name = "UNKNOWN"; break;
+    }
+    
+    if (current_step_ % config_.action_log_frequency == 0) { // Log based on configuration
+        std::cout << "Step " << current_step_ << ": Agent selected " << action_name 
+                  << " (Distance to goal: " << obs.distance_to_goal << ")" << std::endl;
+    }
+    
+    // Execute action on drone
+    float throttle = 0.0f;
+    float yaw_rate = 0.0f;
+    
+    // Track action statistics
+    action_stats_.total_actions++;
+    
+    switch (action) {
+        case agent::Action::THROTTLE_FORWARD:
+            throttle = 1.0f * config_.throttle_scale;  // Apply throttle scaling
+            yaw_rate = 0.0f;
+            action_stats_.forward_actions++;
+            break;
+        case agent::Action::YAW_LEFT:
+            throttle = 0.0f;
+            yaw_rate = -1.0f * config_.yaw_rate_scale; // Apply yaw rate scaling
+            action_stats_.left_turn_actions++;
+            break;
+        case agent::Action::YAW_RIGHT:
+            throttle = 0.0f;
+            yaw_rate = 1.0f * config_.yaw_rate_scale;  // Apply yaw rate scaling
+            action_stats_.right_turn_actions++;
+            break;
+        case agent::Action::IDLE:
+        default:
+            throttle = 0.0f;
+            yaw_rate = 0.0f;
+            action_stats_.idle_actions++;
+            break;
+    }
+    
+    // Safety check: Check if action would cause collision (if enabled)
+    if (config_.enable_safety_checks && drone_->wouldCollide(throttle, yaw_rate, config_.time_step)) {
+        // Emergency stop - override action with safe values
+        throttle = 0.0f;
+        yaw_rate = 0.0f;
+        action_stats_.blocked_actions++;
+        std::cout << "Safety: Action blocked due to potential collision" << std::endl;
+    }
+    
+    // Constraint check: Ensure action is within drone limits (if enabled)
+    if (config_.enable_safety_checks && !drone_->isWithinConstraints(throttle, yaw_rate)) {
+        // Scale down action to fit within constraints
+        float scale_factor = 0.5f;
+        throttle *= scale_factor;
+        yaw_rate *= scale_factor;
+        action_stats_.scaled_actions++;
+        std::cout << "Safety: Action scaled down to fit constraints" << std::endl;
+    }
+    
+    // Update drone physics
+    drone_->update(config_.time_step, throttle, yaw_rate);
+    
+    // Check for emergency stop after action
+    if (drone_->isEmergencyStop()) {
+        action_stats_.emergency_stops++;
+        std::cout << "Safety: Emergency stop activated" << std::endl;
+    }
+    
+    // Get next observation after action execution
+    agent::Observation next_obs = getCurrentObservation();
+    
+    // Track progress and success
+    float previous_distance = obs.distance_to_goal;
+    float current_distance = next_obs.distance_to_goal;
+    float progress = previous_distance - current_distance;
+    
+    if (progress > 5.0f) { // Significant progress threshold
+        std::cout << "Progress: Moved " << progress << " units closer to goal!" << std::endl;
+    }
+    
+    // Check if goal was reached
+    if (drone_->hasReachedGoal(world_->getGoalPosition())) {
+        std::cout << "SUCCESS: Goal reached in " << current_step_ << " steps!" << std::endl;
+    }
+    
+    // Check for collisions and boundary violations
+    cv::Point2f current_pos = drone_->getState().position;
+    if (world_->checkCollision(current_pos, 10.0f)) {
+        std::cout << "WARNING: Collision detected at position (" 
+                  << current_pos.x << ", " << current_pos.y << ")" << std::endl;
+    }
+    
+    if (!world_->isInBounds(current_pos)) {
+        std::cout << "WARNING: Drone out of bounds at position (" 
+                  << current_pos.x << ", " << current_pos.y << ")" << std::endl;
+    }
     
     // Calculate reward
     float reward = getCurrentReward();
@@ -74,6 +202,14 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
         if (auto q_agent = std::dynamic_pointer_cast<agent::QLearningAgent>(agent)) {
             q_agent->setOptimalPath(optimal_path_);
         }
+    }
+    
+    // Log episode statistics periodically
+    if (current_step_ % 50 == 0) {
+        std::cout << "Episode Progress: Step " << current_step_ 
+                  << ", Reward: " << cumulative_reward_
+                  << ", Distance: " << next_obs.distance_to_goal
+                  << ", Success Rate: " << (getSuccessRate() * 100.0f) << "%" << std::endl;
     }
     
     current_step_++;
@@ -187,6 +323,48 @@ float Environment::calculateReward() const {
         // Bonus for reaching waypoints
         if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
             reward += 5.0f; // Small bonus for waypoint progress
+        }
+    }
+    
+    // Action efficiency reward - encourage forward movement, discourage excessive turning
+    if (drone_) {
+        // Get the last action from the agent (we'll need to track this)
+        // For now, use a simple heuristic based on current state
+        
+        // Reward for moving toward goal (forward progress)
+        cv::Point2f current_pos = drone_->getState().position;
+        cv::Point2f goal_pos = world_->getGoalPosition();
+        float current_distance = cv::norm(current_pos - goal_pos);
+        
+        // If we're making progress (closer to goal than episode start), give a small reward
+        if (current_distance < cv::norm(episode_start_ - goal_pos)) {
+            reward += 1.0f; // Small positive reward for progress
+        }
+        
+        // Small penalty for being stuck in the same area (oscillating)
+        if (path_trace_.size() > 10) {
+            cv::Point2f recent_center(0, 0);
+            for (int i = path_trace_.size() - 10; i < path_trace_.size(); ++i) {
+                recent_center += path_trace_[i];
+            }
+            recent_center = recent_center * (1.0f / 10.0f);
+            
+            float area_covered = 0.0f;
+            for (int i = path_trace_.size() - 10; i < path_trace_.size(); ++i) {
+                area_covered += cv::norm(path_trace_[i] - recent_center);
+            }
+            
+            // If oscillating in small area, apply small penalty
+            if (area_covered < 50.0f) {
+                reward -= 0.1f; // Much smaller penalty for oscillation
+            }
+        }
+        
+        // Bonus for staying within world bounds
+        if (world_->isInBounds(current_pos)) {
+            reward += 0.1f; // Small bonus for staying in bounds
+        } else {
+            reward -= 1.0f; // Penalty for going out of bounds
         }
     }
     
@@ -333,6 +511,25 @@ void Environment::updateWaypointProgress() {
         std::cout << "Reached waypoint " << current_waypoint_index_ - 1 
                   << " of " << optimal_path_.size() << std::endl;
     }
+}
+
+void Environment::printActionStats() const {
+    std::cout << "\n=== Action Execution Statistics ===" << std::endl;
+    std::cout << "Total Actions: " << action_stats_.total_actions << std::endl;
+    std::cout << "Forward Actions: " << action_stats_.forward_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.forward_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Left Turn Actions: " << action_stats_.left_turn_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.left_turn_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Right Turn Actions: " << action_stats_.right_turn_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.right_turn_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Idle Actions: " << action_stats_.idle_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.idle_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Blocked Actions: " << action_stats_.blocked_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.blocked_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Scaled Actions: " << action_stats_.scaled_actions 
+              << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.scaled_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
+    std::cout << "Emergency Stops: " << action_stats_.emergency_stops << std::endl;
+    std::cout << "=====================================" << std::endl;
 }
 
 } // namespace bridge

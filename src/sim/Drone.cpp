@@ -37,10 +37,47 @@ void Drone::update(float dt, float throttle, float yaw_rate) {
     // Update velocity
     state_.velocity = throttle * constraints_.max_velocity;
     
-    // Update position
+    // Calculate new position
     float dx = state_.velocity * cos(state_.heading) * dt;
     float dy = state_.velocity * sin(state_.heading) * dt;
-    state_.position += cv::Point2f(dx, dy);
+    cv::Point2f new_position = state_.position + cv::Point2f(dx, dy);
+    
+    // Check if new position would be valid
+    bool can_move = true;
+    
+    // Check collision with obstacles
+    if (world_ && world_->checkCollision(new_position, constraints_.safety_margin)) {
+        can_move = false;
+    }
+    
+    // Check if new position would be out of bounds
+    if (world_ && !world_->isInBounds(new_position)) {
+        can_move = false;
+    }
+    
+    // Check if new position would be too close to boundaries
+    if (world_) {
+        float margin = constraints_.safety_margin;
+        if (new_position.x < margin || new_position.x >= world_->getSize().width - margin ||
+            new_position.y < margin || new_position.y >= world_->getSize().height - margin) {
+            can_move = false;
+        }
+    }
+    
+    // Update position only if movement is valid
+    if (can_move) {
+        state_.position = new_position;
+    } else {
+        // If we can't move, reduce velocity to simulate hitting something
+        state_.velocity *= 0.5f;
+        
+        // Clamp position to world bounds if we somehow got outside
+        if (world_) {
+            float margin = constraints_.safety_margin;
+            state_.position.x = std::max(margin, std::min(world_->getSize().width - margin, state_.position.x));
+            state_.position.y = std::max(margin, std::min(world_->getSize().height - margin, state_.position.y));
+        }
+    }
 }
 
 bool Drone::isEmergencyStop() const {
