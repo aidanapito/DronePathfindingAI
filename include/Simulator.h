@@ -63,6 +63,7 @@ private:
     void updateSimulation();
     void renderFrame();
     void recordFrame();
+    std::string getMapTypeName(sim::MapType map_type);
     
     // Agent selection
     std::shared_ptr<agent::Agent> createAgent();

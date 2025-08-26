@@ -69,6 +69,7 @@ public:
     bool getUsePathfinding() const { return use_pathfinding_; }
     void setPathfindingAlgorithm(const std::string& algorithm) { pathfinding_algorithm_ = algorithm; }
     std::string getPathfindingAlgorithm() const { return pathfinding_algorithm_; }
+    int getCurrentWaypointIndex() const { return current_waypoint_index_; }
     
     // Action execution statistics
     struct ActionStats {
