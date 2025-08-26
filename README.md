@@ -2,7 +2,9 @@
 
 A self-contained C++17 project implementing intelligent drone navigation using reinforcement learning, featuring both discrete Q-learning and vision-based deep learning approaches.
 
-## 🚁 Project Overview
+<!-- Repository language detection fix applied -->
+
+## �� Project Overview
 
 This project implements a lightweight drone simulator with two learning tracks:
 
