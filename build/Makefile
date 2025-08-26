@@ -200,6 +200,58 @@ test_pathfinding/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_pathfinding.dir/build.make CMakeFiles/test_pathfinding.dir/build
 .PHONY : test_pathfinding/fast
 
+#=============================================================================
+# Target rules for targets named minimal_test
+
+# Build rule for target.
+minimal_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 minimal_test
+.PHONY : minimal_test
+
+# fast build rule for target.
+minimal_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/build
+.PHONY : minimal_test/fast
+
+#=============================================================================
+# Target rules for targets named environment_test
+
+# Build rule for target.
+environment_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 environment_test
+.PHONY : environment_test
+
+# fast build rule for target.
+environment_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/environment_test.dir/build.make CMakeFiles/environment_test.dir/build
+.PHONY : environment_test/fast
+
+#=============================================================================
+# Target rules for targets named pathfinding_test
+
+# Build rule for target.
+pathfinding_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 pathfinding_test
+.PHONY : pathfinding_test
+
+# fast build rule for target.
+pathfinding_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pathfinding_test.dir/build.make CMakeFiles/pathfinding_test.dir/build
+.PHONY : pathfinding_test/fast
+
+#=============================================================================
+# Target rules for targets named episode_test
+
+# Build rule for target.
+episode_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 episode_test
+.PHONY : episode_test
+
+# fast build rule for target.
+episode_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/episode_test.dir/build.make CMakeFiles/episode_test.dir/build
+.PHONY : episode_test/fast
+
 src/Simulator.o: src/Simulator.cpp.o
 .PHONY : src/Simulator.o
 
@@ -344,6 +396,54 @@ src/bridge/Environment.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/bridge/Environment.cpp.s
 .PHONY : src/bridge/Environment.cpp.s
 
+src/environment_test.o: src/environment_test.cpp.o
+.PHONY : src/environment_test.o
+
+# target to build an object file
+src/environment_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/environment_test.dir/build.make CMakeFiles/environment_test.dir/src/environment_test.cpp.o
+.PHONY : src/environment_test.cpp.o
+
+src/environment_test.i: src/environment_test.cpp.i
+.PHONY : src/environment_test.i
+
+# target to preprocess a source file
+src/environment_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/environment_test.dir/build.make CMakeFiles/environment_test.dir/src/environment_test.cpp.i
+.PHONY : src/environment_test.cpp.i
+
+src/environment_test.s: src/environment_test.cpp.s
+.PHONY : src/environment_test.s
+
+# target to generate assembly for a file
+src/environment_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/environment_test.dir/build.make CMakeFiles/environment_test.dir/src/environment_test.cpp.s
+.PHONY : src/environment_test.cpp.s
+
+src/episode_test.o: src/episode_test.cpp.o
+.PHONY : src/episode_test.o
+
+# target to build an object file
+src/episode_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/episode_test.dir/build.make CMakeFiles/episode_test.dir/src/episode_test.cpp.o
+.PHONY : src/episode_test.cpp.o
+
+src/episode_test.i: src/episode_test.cpp.i
+.PHONY : src/episode_test.i
+
+# target to preprocess a source file
+src/episode_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/episode_test.dir/build.make CMakeFiles/episode_test.dir/src/episode_test.cpp.i
+.PHONY : src/episode_test.cpp.i
+
+src/episode_test.s: src/episode_test.cpp.s
+.PHONY : src/episode_test.s
+
+# target to generate assembly for a file
+src/episode_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/episode_test.dir/build.make CMakeFiles/episode_test.dir/src/episode_test.cpp.s
+.PHONY : src/episode_test.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -370,6 +470,54 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/main.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI.dir/build.make CMakeFiles/DronePathfindingAI.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
+
+src/minimal_test.o: src/minimal_test.cpp.o
+.PHONY : src/minimal_test.o
+
+# target to build an object file
+src/minimal_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/src/minimal_test.cpp.o
+.PHONY : src/minimal_test.cpp.o
+
+src/minimal_test.i: src/minimal_test.cpp.i
+.PHONY : src/minimal_test.i
+
+# target to preprocess a source file
+src/minimal_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/src/minimal_test.cpp.i
+.PHONY : src/minimal_test.cpp.i
+
+src/minimal_test.s: src/minimal_test.cpp.s
+.PHONY : src/minimal_test.s
+
+# target to generate assembly for a file
+src/minimal_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/src/minimal_test.cpp.s
+.PHONY : src/minimal_test.cpp.s
+
+src/pathfinding_test.o: src/pathfinding_test.cpp.o
+.PHONY : src/pathfinding_test.o
+
+# target to build an object file
+src/pathfinding_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pathfinding_test.dir/build.make CMakeFiles/pathfinding_test.dir/src/pathfinding_test.cpp.o
+.PHONY : src/pathfinding_test.cpp.o
+
+src/pathfinding_test.i: src/pathfinding_test.cpp.i
+.PHONY : src/pathfinding_test.i
+
+# target to preprocess a source file
+src/pathfinding_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pathfinding_test.dir/build.make CMakeFiles/pathfinding_test.dir/src/pathfinding_test.cpp.i
+.PHONY : src/pathfinding_test.cpp.i
+
+src/pathfinding_test.s: src/pathfinding_test.cpp.s
+.PHONY : src/pathfinding_test.s
+
+# target to generate assembly for a file
+src/pathfinding_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pathfinding_test.dir/build.make CMakeFiles/pathfinding_test.dir/src/pathfinding_test.cpp.s
+.PHONY : src/pathfinding_test.cpp.s
 
 src/sim/Drone.o: src/sim/Drone.cpp.o
 .PHONY : src/sim/Drone.o
@@ -481,6 +629,10 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... DronePathfindingAI"
 	@echo "... DronePathfindingAI_lib"
+	@echo "... environment_test"
+	@echo "... episode_test"
+	@echo "... minimal_test"
+	@echo "... pathfinding_test"
 	@echo "... test_pathfinding"
 	@echo "... src/Simulator.o"
 	@echo "... src/Simulator.i"
@@ -500,9 +652,21 @@ help:
 	@echo "... src/bridge/Environment.o"
 	@echo "... src/bridge/Environment.i"
 	@echo "... src/bridge/Environment.s"
+	@echo "... src/environment_test.o"
+	@echo "... src/environment_test.i"
+	@echo "... src/environment_test.s"
+	@echo "... src/episode_test.o"
+	@echo "... src/episode_test.i"
+	@echo "... src/episode_test.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/minimal_test.o"
+	@echo "... src/minimal_test.i"
+	@echo "... src/minimal_test.s"
+	@echo "... src/pathfinding_test.o"
+	@echo "... src/pathfinding_test.i"
+	@echo "... src/pathfinding_test.s"
 	@echo "... src/sim/Drone.o"
 	@echo "... src/sim/Drone.i"
 	@echo "... src/sim/Drone.s"

@@ -1,6 +1,10 @@
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/DronePathfindingAI_lib.dir
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/DronePathfindingAI.dir
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/test_pathfinding.dir
+/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/minimal_test.dir
+/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/environment_test.dir
+/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/pathfinding_test.dir
+/Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/episode_test.dir
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/edit_cache.dir
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/rebuild_cache.dir
 /Users/aidan/Documents/DronePathfindingAI/build/CMakeFiles/list_install_components.dir
