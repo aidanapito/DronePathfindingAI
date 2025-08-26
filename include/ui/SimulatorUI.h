@@ -67,6 +67,13 @@ public:
     void stopRecording();
     bool isRecording() const { return video_writer_.isOpened(); }
     
+    // Path trace management
+    void addPathPoint(const cv::Point2f& world_pos);
+    void clearPathTrace();
+    
+    // Display buffer access
+    cv::Mat getDisplayBuffer() const;
+    
     // Configuration
     void setConfig(const UIConfig& config);
     const UIConfig& getConfig() const { return config_; }
@@ -83,7 +90,7 @@ private:
     bool show_debug_overlay_;
     std::vector<cv::Point2f> path_trace_;
     float current_fps_;
-    float last_frame_time_;
+    std::chrono::high_resolution_clock::time_point last_frame_time_;
     
     // Helper methods
     void renderWorld(const sim::World& world);
@@ -101,6 +108,7 @@ private:
                    const cv::Scalar& color, int thickness = 2);
     void drawText(cv::Mat& img, const std::string& text, const cv::Point& pos, 
                   const cv::Scalar& color, double scale = 0.6);
+    std::string getModeString() const;
     
     // Keybinding handlers
     void handlePauseKey();

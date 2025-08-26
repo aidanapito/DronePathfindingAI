@@ -390,7 +390,23 @@ void Simulator::renderFrame() {
     
     // Add UI elements
     if (ui_) {
-        ui_->render(*world_, *drone_, agent_.get());
+        // Update path trace
+        ui_->addPathPoint(drone_pos);
+        
+        // Render UI overlay
+        ui_->renderUI(*environment_);
+        
+        // Get the UI display buffer and overlay it
+        cv::Mat ui_overlay = ui_->getDisplayBuffer();
+        if (!ui_overlay.empty()) {
+            // Resize UI overlay to match main display if needed
+            if (ui_overlay.size() != display.size()) {
+                cv::resize(ui_overlay, ui_overlay, display.size());
+            }
+            
+            // Blend UI overlay with main display
+            cv::addWeighted(display, 0.8, ui_overlay, 0.2, 0, display);
+        }
     }
     
     // Show the frame

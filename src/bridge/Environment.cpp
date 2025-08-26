@@ -4,10 +4,11 @@
 namespace bridge {
 
 Environment::Environment(const EnvironmentConfig& config) 
-    : config_(config), current_step_(0), cumulative_reward_(0.0f),
+    : config_(config), current_step_(0), episode_count_(0), cumulative_reward_(0.0f),
       use_pathfinding_(true), pathfinding_algorithm_("astar"), current_waypoint_index_(0) {
     // Initialize member variables
     current_step_ = 0;
+    episode_count_ = 0;
     cumulative_reward_ = 0.0f;
     path_trace_.clear();
     episode_start_ = cv::Point2f(0, 0);
@@ -82,6 +83,7 @@ EpisodeResult Environment::runEpisode(std::shared_ptr<agent::Agent> agent) {
     result.path_trace = path_trace_;
     
     episode_history_.push_back(result);
+    episode_count_++; // Increment episode counter
     return result;
 }
 

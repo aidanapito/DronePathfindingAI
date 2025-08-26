@@ -50,8 +50,14 @@ public:
     
     // Environment state
     bool isDone() const;
-    float getCurrentReward() const;
+    
+    // Episode information
+    int getEpisodeCount() const { return episode_count_; }
+    int getCurrentStep() const { return current_step_; }
+    
+    // Current state
     agent::Observation getCurrentObservation() const;
+    float getCurrentReward() const;
     
     // Configuration
     void setAgent(std::shared_ptr<agent::Agent> agent);
@@ -112,6 +118,7 @@ private:
     
     // Episode state
     int current_step_;
+    int episode_count_;
     float cumulative_reward_;
     std::vector<cv::Point2f> path_trace_;
     cv::Point2f episode_start_;
