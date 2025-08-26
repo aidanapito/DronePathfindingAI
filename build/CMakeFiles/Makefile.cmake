@@ -64,4 +64,6 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/environment_test.dir/DependInfo.cmake"
   "CMakeFiles/pathfinding_test.dir/DependInfo.cmake"
   "CMakeFiles/episode_test.dir/DependInfo.cmake"
+  "CMakeFiles/debug_setup.dir/DependInfo.cmake"
+  "CMakeFiles/replicate_original.dir/DependInfo.cmake"
   )

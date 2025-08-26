@@ -252,6 +252,32 @@ episode_test/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/episode_test.dir/build.make CMakeFiles/episode_test.dir/build
 .PHONY : episode_test/fast
 
+#=============================================================================
+# Target rules for targets named debug_setup
+
+# Build rule for target.
+debug_setup: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 debug_setup
+.PHONY : debug_setup
+
+# fast build rule for target.
+debug_setup/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/debug_setup.dir/build.make CMakeFiles/debug_setup.dir/build
+.PHONY : debug_setup/fast
+
+#=============================================================================
+# Target rules for targets named replicate_original
+
+# Build rule for target.
+replicate_original: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 replicate_original
+.PHONY : replicate_original
+
+# fast build rule for target.
+replicate_original/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/replicate_original.dir/build.make CMakeFiles/replicate_original.dir/build
+.PHONY : replicate_original/fast
+
 src/Simulator.o: src/Simulator.cpp.o
 .PHONY : src/Simulator.o
 
@@ -396,6 +422,30 @@ src/bridge/Environment.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DronePathfindingAI_lib.dir/build.make CMakeFiles/DronePathfindingAI_lib.dir/src/bridge/Environment.cpp.s
 .PHONY : src/bridge/Environment.cpp.s
 
+src/debug_setup.o: src/debug_setup.cpp.o
+.PHONY : src/debug_setup.o
+
+# target to build an object file
+src/debug_setup.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/debug_setup.dir/build.make CMakeFiles/debug_setup.dir/src/debug_setup.cpp.o
+.PHONY : src/debug_setup.cpp.o
+
+src/debug_setup.i: src/debug_setup.cpp.i
+.PHONY : src/debug_setup.i
+
+# target to preprocess a source file
+src/debug_setup.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/debug_setup.dir/build.make CMakeFiles/debug_setup.dir/src/debug_setup.cpp.i
+.PHONY : src/debug_setup.cpp.i
+
+src/debug_setup.s: src/debug_setup.cpp.s
+.PHONY : src/debug_setup.s
+
+# target to generate assembly for a file
+src/debug_setup.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/debug_setup.dir/build.make CMakeFiles/debug_setup.dir/src/debug_setup.cpp.s
+.PHONY : src/debug_setup.cpp.s
+
 src/environment_test.o: src/environment_test.cpp.o
 .PHONY : src/environment_test.o
 
@@ -519,6 +569,30 @@ src/pathfinding_test.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pathfinding_test.dir/build.make CMakeFiles/pathfinding_test.dir/src/pathfinding_test.cpp.s
 .PHONY : src/pathfinding_test.cpp.s
 
+src/replicate_original.o: src/replicate_original.cpp.o
+.PHONY : src/replicate_original.o
+
+# target to build an object file
+src/replicate_original.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/replicate_original.dir/build.make CMakeFiles/replicate_original.dir/src/replicate_original.cpp.o
+.PHONY : src/replicate_original.cpp.o
+
+src/replicate_original.i: src/replicate_original.cpp.i
+.PHONY : src/replicate_original.i
+
+# target to preprocess a source file
+src/replicate_original.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/replicate_original.dir/build.make CMakeFiles/replicate_original.dir/src/replicate_original.cpp.i
+.PHONY : src/replicate_original.cpp.i
+
+src/replicate_original.s: src/replicate_original.cpp.s
+.PHONY : src/replicate_original.s
+
+# target to generate assembly for a file
+src/replicate_original.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/replicate_original.dir/build.make CMakeFiles/replicate_original.dir/src/replicate_original.cpp.s
+.PHONY : src/replicate_original.cpp.s
+
 src/sim/Drone.o: src/sim/Drone.cpp.o
 .PHONY : src/sim/Drone.o
 
@@ -629,10 +703,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... DronePathfindingAI"
 	@echo "... DronePathfindingAI_lib"
+	@echo "... debug_setup"
 	@echo "... environment_test"
 	@echo "... episode_test"
 	@echo "... minimal_test"
 	@echo "... pathfinding_test"
+	@echo "... replicate_original"
 	@echo "... test_pathfinding"
 	@echo "... src/Simulator.o"
 	@echo "... src/Simulator.i"
@@ -652,6 +728,9 @@ help:
 	@echo "... src/bridge/Environment.o"
 	@echo "... src/bridge/Environment.i"
 	@echo "... src/bridge/Environment.s"
+	@echo "... src/debug_setup.o"
+	@echo "... src/debug_setup.i"
+	@echo "... src/debug_setup.s"
 	@echo "... src/environment_test.o"
 	@echo "... src/environment_test.i"
 	@echo "... src/environment_test.s"
@@ -667,6 +746,9 @@ help:
 	@echo "... src/pathfinding_test.o"
 	@echo "... src/pathfinding_test.i"
 	@echo "... src/pathfinding_test.s"
+	@echo "... src/replicate_original.o"
+	@echo "... src/replicate_original.i"
+	@echo "... src/replicate_original.s"
 	@echo "... src/sim/Drone.o"
 	@echo "... src/sim/Drone.i"
 	@echo "... src/sim/Drone.s"
