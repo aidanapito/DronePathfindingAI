@@ -3,6 +3,7 @@
 #include "Agent.h"
 #include <vector>
 #include <deque>
+#include <memory>
 
 #ifdef USE_ONNX
 #include <onnxruntime_cxx_api.h>
@@ -19,6 +20,14 @@ struct FrameBuffer {
     void addFrame(const cv::Mat& frame);
     cv::Mat getStackedFrames() const;
     void reset();
+};
+
+struct Experience {
+    Observation observation;
+    Action action;
+    float reward;
+    Observation next_observation;
+    bool done;
 };
 
 class VisionAgent : public Agent {
@@ -51,6 +60,12 @@ public:
 private:
     FrameBuffer frame_buffer_;
     
+    // Experience replay buffer
+    std::vector<Experience> experience_buffer_;
+    
+    // Action preferences for simple learning
+    std::vector<float> action_preferences_;
+    
     // Model inference
     #ifdef USE_ONNX
     std::unique_ptr<Ort::Session> onnx_session_;
@@ -64,6 +79,7 @@ private:
     float last_inference_time_;
     
     // Helper methods
+    Action selectHeuristicAction(const Observation& obs, const sim::Drone& drone);
     cv::Mat normalizeFrame(const cv::Mat& frame) const;
     std::vector<float> frameToTensor(const cv::Mat& frame) const;
     Action tensorToAction(const std::vector<float>& action_probs) const;

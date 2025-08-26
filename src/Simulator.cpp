@@ -187,6 +187,13 @@ void Simulator::setMapType(sim::MapType map_type) {
 
 void Simulator::setLearningTrack(bool use_vision) {
     use_vision_track_ = use_vision;
+    
+    // Recreate agent with new learning track
+    if (environment_) {
+        agent_ = createAgent();
+        environment_->setAgent(agent_);
+        std::cout << "Switched to " << (use_vision ? "Vision Agent (Track B)" : "Q-Learning Agent (Track A)") << std::endl;
+    }
 }
 
 void Simulator::pause() {
