@@ -6,6 +6,16 @@ namespace bridge {
 Environment::Environment(const EnvironmentConfig& config) 
     : config_(config), current_step_(0), cumulative_reward_(0.0f),
       use_pathfinding_(true), pathfinding_algorithm_("astar"), current_waypoint_index_(0) {
+    // Initialize member variables
+    current_step_ = 0;
+    cumulative_reward_ = 0.0f;
+    path_trace_.clear();
+    episode_start_ = cv::Point2f(0, 0);
+    episode_goal_ = cv::Point2f(0, 0);
+    use_pathfinding_ = false;
+    pathfinding_algorithm_ = "astar";
+    current_waypoint_index_ = 0;
+    last_action_ = agent::Action::IDLE;
 }
 
 void Environment::reset() {
@@ -15,6 +25,9 @@ void Environment::reset() {
     
     // Reset action statistics
     action_stats_ = ActionStats{};
+    
+    // Reset last action
+    last_action_ = agent::Action::IDLE;
     
     if (world_ && drone_) {
         // Reset drone to start position
@@ -80,6 +93,9 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     
     // Agent selects action
     agent::Action action = agent->selectAction(obs, *drone_);
+    
+    // Store last action for reward shaping
+    last_action_ = action;
     
     // Log selected action for debugging
     std::string action_name;
@@ -314,57 +330,179 @@ float Environment::calculateReward() const {
     // Safety margin penalty
     reward += getSafetyMarginPenalty();
     
-    // Path following reward (when pathfinding is enabled)
-    if (use_pathfinding_ && !optimal_path_.empty()) {
-        float path_distance = getDistanceToPath();
-        float path_reward = -path_distance * 0.01f; // Small penalty for deviating from path
-        reward += path_reward;
-        
-        // Bonus for reaching waypoints
-        if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
-            reward += 5.0f; // Small bonus for waypoint progress
-        }
-    }
-    
-    // Action efficiency reward - encourage forward movement, discourage excessive turning
+    // Enhanced goal-seeking rewards
     if (drone_) {
-        // Get the last action from the agent (we'll need to track this)
-        // For now, use a simple heuristic based on current state
-        
-        // Reward for moving toward goal (forward progress)
         cv::Point2f current_pos = drone_->getState().position;
         cv::Point2f goal_pos = world_->getGoalPosition();
         float current_distance = cv::norm(current_pos - goal_pos);
+        float start_distance = cv::norm(episode_start_ - goal_pos);
         
-        // If we're making progress (closer to goal than episode start), give a small reward
-        if (current_distance < cv::norm(episode_start_ - goal_pos)) {
-            reward += 1.0f; // Small positive reward for progress
+        // 1. DIRECT DISTANCE REWARD: Reward for being closer to goal
+        float distance_progress = start_distance - current_distance;
+        if (distance_progress > 0) {
+            // Exponential reward for getting closer (more reward for significant progress)
+            float progress_ratio = distance_progress / start_distance;
+            reward += progress_ratio * 10.0f; // Scale up progress rewards
         }
         
-        // Small penalty for being stuck in the same area (oscillating)
-        if (path_trace_.size() > 10) {
+        // 2. DIRECTIONAL REWARD: Reward for moving toward goal
+        if (path_trace_.size() >= 2) {
+            cv::Point2f current_pos = path_trace_.back();
+            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+            
+            // Calculate movement vector
+            cv::Point2f movement = current_pos - prev_pos;
+            float movement_magnitude = cv::norm(movement);
+            
+            if (movement_magnitude > 0.1f) { // Only if actually moving
+                // Calculate goal direction
+                cv::Point2f goal_direction = goal_pos - prev_pos;
+                float goal_distance = cv::norm(goal_direction);
+                
+                if (goal_distance > 0.1f) {
+                    // Normalize vectors
+                    goal_direction = goal_direction * (1.0f / goal_distance);
+                    cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
+                    
+                    // Dot product: 1.0 = moving directly toward goal, -1.0 = moving away
+                    float alignment = goal_direction.dot(normalized_movement);
+                    
+                    // Reward for moving toward goal, penalty for moving away
+                    if (alignment > 0.7f) {
+                        reward += 2.0f; // Strong reward for moving toward goal
+                    } else if (alignment > 0.3f) {
+                        reward += 0.5f; // Small reward for somewhat toward goal
+                    } else if (alignment < -0.5f) {
+                        reward -= 1.0f; // Penalty for moving away from goal
+                    }
+                }
+            }
+        }
+        
+        // 3. PATH FOLLOWING REWARD (when pathfinding is enabled)
+        if (use_pathfinding_ && !optimal_path_.empty()) {
+            float path_distance = getDistanceToPath();
+            
+            // Exponential penalty for deviating from path (more penalty for larger deviations)
+            if (path_distance > 0) {
+                float path_penalty = -std::min(path_distance * 0.05f, 5.0f); // Cap penalty at -5
+                reward += path_penalty;
+            }
+            
+            // Enhanced waypoint rewards
+            if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
+                // Bonus for reaching waypoints (scaled by progress)
+                float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
+                reward += waypoint_progress * 10.0f; // More reward for later waypoints
+                
+                // Additional bonus for being close to next waypoint
+                cv::Point2f next_waypoint = getNextWaypoint();
+                float distance_to_waypoint = cv::norm(current_pos - next_waypoint);
+                if (distance_to_waypoint < 30.0f) {
+                    reward += (30.0f - distance_to_waypoint) * 0.1f; // Closer = more reward
+                }
+            }
+        }
+        
+        // 4. EFFICIENCY REWARDS: Encourage smart movement patterns
+        if (path_trace_.size() > 5) {
+            // Reward for covering new ground (not retracing steps)
             cv::Point2f recent_center(0, 0);
-            for (int i = path_trace_.size() - 10; i < path_trace_.size(); ++i) {
+            int lookback = std::min(5, static_cast<int>(path_trace_.size()));
+            
+            for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
                 recent_center += path_trace_[i];
             }
-            recent_center = recent_center * (1.0f / 10.0f);
+            recent_center = recent_center * (1.0f / lookback);
             
             float area_covered = 0.0f;
-            for (int i = path_trace_.size() - 10; i < path_trace_.size(); ++i) {
+            for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
                 area_covered += cv::norm(path_trace_[i] - recent_center);
             }
             
-            // If oscillating in small area, apply small penalty
-            if (area_covered < 50.0f) {
-                reward -= 0.1f; // Much smaller penalty for oscillation
+            // If exploring new area, give reward; if oscillating, small penalty
+            if (area_covered > 100.0f) {
+                reward += 1.0f; // Reward for exploration
+            } else if (area_covered < 30.0f) {
+                reward -= 0.2f; // Small penalty for oscillation
             }
         }
         
-        // Bonus for staying within world bounds
+        // 5. BOUNDARY REWARDS: Encourage staying in bounds
         if (world_->isInBounds(current_pos)) {
-            reward += 0.1f; // Small bonus for staying in bounds
+            reward += 0.2f; // Small bonus for staying in bounds
         } else {
-            reward -= 1.0f; // Penalty for going out of bounds
+            reward -= 2.0f; // Stronger penalty for going out of bounds
+        }
+        
+        // 6. SPEED EFFICIENCY: Reward for moving at good speed toward goal
+        if (path_trace_.size() >= 2) {
+            cv::Point2f current_pos = path_trace_.back();
+            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+            float step_distance = cv::norm(current_pos - prev_pos);
+            
+            // Reward for making meaningful progress (not just tiny movements)
+            if (step_distance > 5.0f) {
+                reward += 0.5f; // Reward for substantial movement
+            }
+        }
+        
+        // 7. GOAL PROXIMITY BONUS: Extra reward when getting very close to goal
+        float goal_proximity = 1.0f - (current_distance / start_distance);
+        if (goal_proximity > 0.8f) {
+            reward += 5.0f; // Bonus for being very close to goal
+        } else if (goal_proximity > 0.5f) {
+            reward += 2.0f; // Bonus for being moderately close
+        }
+        
+        // 8. ACTION-SPECIFIC REWARDS: Encourage efficient movement patterns
+        if (path_trace_.size() >= 2) {
+            cv::Point2f current_pos = path_trace_.back();
+            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+            cv::Point2f goal_pos = world_->getGoalPosition();
+            
+            // Calculate if the last action moved us toward the goal
+            float prev_distance = cv::norm(prev_pos - goal_pos);
+            float current_distance = cv::norm(current_pos - goal_pos);
+            bool moved_toward_goal = current_distance < prev_distance;
+            
+            // Reward/penalty based on action effectiveness
+            switch (last_action_) {
+                case agent::Action::THROTTLE_FORWARD:
+                    if (moved_toward_goal) {
+                        reward += 1.0f; // Reward for effective forward movement
+                    } else {
+                        reward -= 0.5f; // Small penalty for ineffective forward movement
+                    }
+                    break;
+                    
+                case agent::Action::YAW_LEFT:
+                case agent::Action::YAW_RIGHT:
+                    // Reward turning if it aligns us better with goal direction
+                    if (path_trace_.size() >= 3) {
+                        cv::Point2f two_back = path_trace_[path_trace_.size() - 3];
+                        cv::Point2f old_direction = prev_pos - two_back;
+                        cv::Point2f new_direction = current_pos - prev_pos;
+                        
+                        if (cv::norm(old_direction) > 0.1f && cv::norm(new_direction) > 0.1f) {
+                            cv::Point2f goal_direction = goal_pos - prev_pos;
+                            float old_alignment = old_direction.dot(goal_direction) / (cv::norm(old_direction) * cv::norm(goal_direction));
+                            float new_alignment = new_direction.dot(goal_direction) / (cv::norm(new_direction) * cv::norm(goal_direction));
+                            
+                            if (new_alignment > old_alignment) {
+                                reward += 0.5f; // Reward for turning toward goal
+                            } else {
+                                reward -= 0.3f; // Small penalty for turning away from goal
+                            }
+                        }
+                    }
+                    break;
+                    
+                case agent::Action::IDLE:
+                    // Small penalty for doing nothing (encourage action)
+                    reward -= 0.1f;
+                    break;
+            }
         }
     }
     
@@ -530,6 +668,146 @@ void Environment::printActionStats() const {
               << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.scaled_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
     std::cout << "Emergency Stops: " << action_stats_.emergency_stops << std::endl;
     std::cout << "=====================================" << std::endl;
+}
+
+Environment::RewardBreakdown Environment::getRewardBreakdown() const {
+    RewardBreakdown breakdown;
+    
+    if (!world_ || !drone_) return breakdown;
+    
+    // Calculate each reward component
+    breakdown.goal_reward = getGoalReward();
+    breakdown.collision_penalty = getCollisionPenalty();
+    breakdown.progress_reward = getProgressReward();
+    breakdown.time_penalty = getTimePenalty();
+    breakdown.safety_penalty = getSafetyMarginPenalty();
+    
+    // Calculate enhanced rewards (simplified version for breakdown)
+    cv::Point2f current_pos = drone_->getState().position;
+    cv::Point2f goal_pos = world_->getGoalPosition();
+    float current_distance = cv::norm(current_pos - goal_pos);
+    float start_distance = cv::norm(episode_start_ - goal_pos);
+    
+    // Directional reward
+    if (path_trace_.size() >= 2) {
+        cv::Point2f current_pos = path_trace_.back();
+        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+        cv::Point2f movement = current_pos - prev_pos;
+        float movement_magnitude = cv::norm(movement);
+        
+        if (movement_magnitude > 0.1f) {
+            cv::Point2f goal_direction = goal_pos - prev_pos;
+            float goal_distance = cv::norm(goal_direction);
+            
+            if (goal_distance > 0.1f) {
+                goal_direction = goal_direction * (1.0f / goal_distance);
+                cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
+                float alignment = goal_direction.dot(normalized_movement);
+                
+                if (alignment > 0.7f) {
+                    breakdown.directional_reward = 2.0f;
+                } else if (alignment > 0.3f) {
+                    breakdown.directional_reward = 0.5f;
+                } else if (alignment < -0.5f) {
+                    breakdown.directional_reward = -1.0f;
+                }
+            }
+        }
+    }
+    
+    // Path following reward
+    if (use_pathfinding_ && !optimal_path_.empty()) {
+        float path_distance = getDistanceToPath();
+        if (path_distance > 0) {
+            breakdown.path_following_reward = -std::min(path_distance * 0.05f, 5.0f);
+        }
+        
+        if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
+            float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
+            breakdown.path_following_reward += waypoint_progress * 10.0f;
+        }
+    }
+    
+    // Efficiency reward
+    if (path_trace_.size() > 5) {
+        cv::Point2f recent_center(0, 0);
+        int lookback = std::min(5, static_cast<int>(path_trace_.size()));
+        
+        for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
+            recent_center += path_trace_[i];
+        }
+        recent_center = recent_center * (1.0f / lookback);
+        
+        float area_covered = 0.0f;
+        for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
+            area_covered += cv::norm(path_trace_[i] - recent_center);
+        }
+        
+        if (area_covered > 100.0f) {
+            breakdown.efficiency_reward = 1.0f;
+        } else if (area_covered < 30.0f) {
+            breakdown.efficiency_reward = -0.2f;
+        }
+    }
+    
+    // Boundary reward
+    if (world_->isInBounds(current_pos)) {
+        breakdown.boundary_reward = 0.2f;
+    } else {
+        breakdown.boundary_reward = -2.0f;
+    }
+    
+    // Speed reward
+    if (path_trace_.size() >= 2) {
+        cv::Point2f current_pos = path_trace_.back();
+        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+        float step_distance = cv::norm(current_pos - prev_pos);
+        
+        if (step_distance > 5.0f) {
+            breakdown.speed_reward = 0.5f;
+        }
+    }
+    
+    // Proximity reward
+    float goal_proximity = 1.0f - (current_distance / start_distance);
+    if (goal_proximity > 0.8f) {
+        breakdown.proximity_reward = 5.0f;
+    } else if (goal_proximity > 0.5f) {
+        breakdown.proximity_reward = 2.0f;
+    }
+    
+    // Action reward (simplified)
+    if (path_trace_.size() >= 2) {
+        cv::Point2f current_pos = path_trace_.back();
+        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+        cv::Point2f goal_pos = world_->getGoalPosition();
+        
+        float prev_distance = cv::norm(prev_pos - goal_pos);
+        float current_distance = cv::norm(current_pos - goal_pos);
+        bool moved_toward_goal = current_distance < prev_distance;
+        
+        switch (last_action_) {
+            case agent::Action::THROTTLE_FORWARD:
+                breakdown.action_reward = moved_toward_goal ? 1.0f : -0.5f;
+                break;
+            case agent::Action::IDLE:
+                breakdown.action_reward = -0.1f;
+                break;
+            default:
+                breakdown.action_reward = 0.0f;
+                break;
+        }
+    }
+    
+    // Calculate total
+    breakdown.total_reward = breakdown.goal_reward + breakdown.collision_penalty + 
+                             breakdown.progress_reward + breakdown.time_penalty + 
+                             breakdown.safety_penalty + breakdown.directional_reward + 
+                             breakdown.path_following_reward + breakdown.efficiency_reward + 
+                             breakdown.boundary_reward + breakdown.speed_reward + 
+                             breakdown.proximity_reward + breakdown.action_reward;
+    
+    return breakdown;
 }
 
 } // namespace bridge

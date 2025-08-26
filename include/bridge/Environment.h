@@ -83,6 +83,24 @@ public:
     };
     ActionStats getActionStats() const { return action_stats_; }
     void printActionStats() const;
+    
+    // Reward analysis
+    struct RewardBreakdown {
+        float goal_reward = 0.0f;
+        float collision_penalty = 0.0f;
+        float progress_reward = 0.0f;
+        float time_penalty = 0.0f;
+        float safety_penalty = 0.0f;
+        float directional_reward = 0.0f;
+        float path_following_reward = 0.0f;
+        float efficiency_reward = 0.0f;
+        float boundary_reward = 0.0f;
+        float speed_reward = 0.0f;
+        float proximity_reward = 0.0f;
+        float action_reward = 0.0f;
+        float total_reward = 0.0f;
+    };
+    RewardBreakdown getRewardBreakdown() const;
 
 private:
     EnvironmentConfig config_;
@@ -109,6 +127,9 @@ private:
     
     // Action execution statistics
     ActionStats action_stats_;
+    
+    // Last action tracking for reward shaping
+    agent::Action last_action_;
     
     // Helper methods
     float calculateReward() const;

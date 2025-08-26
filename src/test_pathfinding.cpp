@@ -30,10 +30,10 @@ int main() {
     env_config.max_steps_per_episode = 1000;
     env_config.time_step = 0.1f;
     env_config.render_episodes = true;
-    env_config.goal_reward = 100.0f;
-    env_config.collision_penalty = -50.0f;
-    env_config.progress_reward = 1.0f;
-    env_config.time_penalty = -0.1f;
+    env_config.goal_reward = 200.0f;           // Increased from 100.0f for stronger goal motivation
+    env_config.collision_penalty = -100.0f;    // Increased from -50.0f for stronger collision avoidance
+    env_config.progress_reward = 2.0f;         // Increased from 1.0f for better progress tracking
+    env_config.time_penalty = -0.05f;          // Reduced from -0.1f to balance with new rewards
     
     // Test different action execution configurations
     std::cout << "\n--- Testing Action Execution Configurations ---" << std::endl;
@@ -85,6 +85,22 @@ int main() {
         
         // Show action execution statistics
         env_conservative->printActionStats();
+        
+        // Show reward breakdown for the last episode
+        std::cout << "  Reward Breakdown:" << std::endl;
+        auto reward_breakdown = env_conservative->getRewardBreakdown();
+        std::cout << "    Goal Reward: " << reward_breakdown.goal_reward << std::endl;
+        std::cout << "    Collision Penalty: " << reward_breakdown.collision_penalty << std::endl;
+        std::cout << "    Progress Reward: " << reward_breakdown.progress_reward << std::endl;
+        std::cout << "    Time Penalty: " << reward_breakdown.time_penalty << std::endl;
+        std::cout << "    Directional Reward: " << reward_breakdown.directional_reward << std::endl;
+        std::cout << "    Path Following Reward: " << reward_breakdown.path_following_reward << std::endl;
+        std::cout << "    Efficiency Reward: " << reward_breakdown.efficiency_reward << std::endl;
+        std::cout << "    Boundary Reward: " << reward_breakdown.boundary_reward << std::endl;
+        std::cout << "    Speed Reward: " << reward_breakdown.speed_reward << std::endl;
+        std::cout << "    Proximity Reward: " << reward_breakdown.proximity_reward << std::endl;
+        std::cout << "    Action Reward: " << reward_breakdown.action_reward << std::endl;
+        std::cout << "    Total Reward: " << reward_breakdown.total_reward << std::endl;
         
         // Show agent debug info
         std::cout << "  Agent Debug Info:" << std::endl;
