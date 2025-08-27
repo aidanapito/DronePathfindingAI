@@ -94,7 +94,11 @@ public:
     std::vector<std::pair<int, int>> getNeighbors(int x, int y, int grid_width, int grid_height) const;
     
     // Getters
-    cv::Size3i getSize() const { return cv::Size3i(width_, height_, depth_); }
+    struct Size3D {
+        int width, height, depth;
+        Size3D(int w, int h, int d) : width(w), height(h), depth(d) {}
+    };
+    Size3D getSize() const { return Size3D(width_, height_, depth_); }
     cv::Size getSize2D() const { return cv::Size(width_, height_); } // Backward compatibility
     const std::vector<Obstacle>& getObstacles() const { return obstacles_; }
     cv::Point3f getStartPosition() const { return start_position_; }

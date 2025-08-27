@@ -152,9 +152,6 @@ private:
     bool shouldTerminateBacktracking(float current_distance);
     Action selectPanicAction(const Observation& obs, const std::vector<Action>& valid_actions);
     Action selectExplorationAction(const Observation& obs, const std::vector<Action>& valid_actions);
-    
-    // Q-learning core methods
-    void updateQValue(const QState& state, Action action, float reward, const QState& next_state, bool done);
 };
 
 } // namespace agent

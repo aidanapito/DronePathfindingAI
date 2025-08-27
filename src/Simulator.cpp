@@ -15,13 +15,14 @@ Simulator::Simulator()
 }
 
 void Simulator::initializeComponents() {
-    // Initialize world
-    world_ = std::make_shared<sim::World>(800, 600);
+    // Initialize world (now supports 3D)
+    world_ = std::make_shared<sim::World>(800, 600, 400); // Added depth parameter
     world_->generateMap(current_map_type_);
     
-    // Initialize drone at start position
-    cv::Point2f start_pos = world_->getStartPosition();
-    drone_ = std::make_shared<sim::Drone>(start_pos);
+    // Initialize drone at start position (convert 2D to 3D for backward compatibility)
+    cv::Point2f start_pos_2d = world_->getStartPosition2D(); // Use 2D getter for backward compatibility
+    cv::Point3f start_pos_3d(start_pos_2d.x, start_pos_2d.y, 50.0f); // Set default altitude
+    drone_ = std::make_shared<sim::Drone>(start_pos_3d, 0.0f, 0.0f, 0.0f);
     drone_->setWorld(world_.get());
     
     // Initialize agent
@@ -40,9 +41,19 @@ void Simulator::initializeComponents() {
     // Conservative movement settings (from our bug fix)
     env_config.throttle_scale = 0.1f;          // 10% throttle = 10 units/step
     env_config.yaw_rate_scale = 0.1f;          // 10% yaw rate = 0.1 rad/step
+    env_config.pitch_rate_scale = 0.1f;        // 3D pitch rate scaling
+    env_config.roll_rate_scale = 0.1f;         // 3D roll rate scaling
+    env_config.vertical_thrust_scale = 0.1f;   // 3D vertical thrust scaling
     env_config.enable_safety_checks = true;
     env_config.enable_action_logging = true;
     env_config.action_log_frequency = 10;
+    
+    // 3D specific settings
+    env_config.enable_3d_mode = true;
+    env_config.enable_3d_pathfinding = true;
+    env_config.max_altitude = 300.0f;
+    env_config.min_altitude = 10.0f;
+    env_config.altitude_safety_margin = 15.0f;
     
     environment_ = std::make_shared<bridge::Environment>(env_config);
     environment_->setWorld(world_);
@@ -53,26 +64,20 @@ void Simulator::initializeComponents() {
     environment_->setPathfindingAlgorithm("astar");
     environment_->setUsePathfinding(true);
     
-    // Initialize UI
-    ui::UIConfig ui_config;
-    ui_config.window_name = "Drone Pathfinding AI";
-    ui_config.window_width = 1200;
-    ui_config.window_height = 800;
-    ui_config.show_debug_info = true;
-    ui_config.show_path_trace = true;
-    ui_config.show_collision_boxes = true;
-    ui_config.show_reward_info = true;
-    ui_config.show_fps = true;
-    ui_config.pause_key = 'p';
-    ui_config.manual_mode_key = 'm';
-    ui_config.record_key = 'v';
-    ui_config.new_map_key = 'n';
-    ui_config.reset_key = 'r';
-    
-    ui_ = std::make_shared<ui::SimulatorUI>(ui_config);
+    // Initialize UI with new 3D-compatible interface
+    ui_ = std::make_shared<ui::SimulatorUI>();
+    ui_->createWindow("Drone Pathfinding AI", 1200, 800);
+    ui_->setRenderMode("3D");
+    ui_->setShowGrid(true);
+    ui_->setShowAxes(true);
+    ui_->setShowPath(true);
+    ui_->setShowObstacles(true);
+    ui_->setShowDrone(true);
+    ui_->setShowGoal(true);
     
     std::cout << "Simulator components initialized" << std::endl;
     std::cout << "Environment configured with conservative movement settings" << std::endl;
+    std::cout << "3D mode enabled with altitude range: " << env_config.min_altitude << " to " << env_config.max_altitude << std::endl;
 }
 
 void Simulator::run() {
@@ -103,9 +108,10 @@ void Simulator::run() {
         renderFrame();
         
         // Record frame if recording
-        if (ui_ && ui_->isRecording()) {
-            recordFrame();
-        }
+        // TODO: Implement frame recording for 3D UI
+        // if (ui_ && ui_->isRecording()) {
+        //     recordFrame();
+        // }
         
         // Control frame rate
         auto current_time = std::chrono::high_resolution_clock::now();
@@ -162,10 +168,21 @@ void Simulator::reset() {
         std::cout << "New " << getMapTypeName(current_map_type_) << " map generated" << std::endl;
     }
     
-    // Reset drone to new start position
+    // Reset drone to new start position (convert 2D to 3D for backward compatibility)
     if (drone_ && world_) {
-        cv::Point2f start_pos = world_->getStartPosition();
-        drone_->setState(sim::DroneState{start_pos, 0.0f, 0.0f, 0.0f});
+        cv::Point2f start_pos_2d = world_->getStartPosition2D(); // Use 2D getter for backward compatibility
+        cv::Point3f start_pos_3d(start_pos_2d.x, start_pos_2d.y, 50.0f); // Set default altitude
+        sim::DroneState start_state;
+        start_state.position = start_pos_3d;
+        start_state.heading = 0.0f;
+        start_state.pitch = 0.0f;
+        start_state.roll = 0.0f;
+        start_state.velocity = 0.0f;
+        start_state.angular_velocity = 0.0f;
+        start_state.pitch_rate = 0.0f;
+        start_state.roll_rate = 0.0f;
+        start_state.vertical_velocity = 0.0f;
+        drone_->setState(start_state);
     }
     
     // Reset agent
@@ -216,13 +233,13 @@ void Simulator::setupEpisode() {
     // Reset environment (this will reset drone, agent, and compute optimal path)
     environment_->reset();
     
-    // Get episode info
-    auto optimal_path = environment_->getOptimalPath();
+    // Get episode info (use 2D path for backward compatibility)
+    auto optimal_path = environment_->getOptimalPath(); // This gets the 2D path
     std::cout << "Optimal path computed with " << optimal_path.size() << " waypoints" << std::endl;
     
-    // Print start/goal positions
-    cv::Point2f start_pos = world_->getStartPosition();
-    cv::Point2f goal_pos = world_->getGoalPosition();
+    // Print start/goal positions (use 2D getters for backward compatibility)
+    cv::Point2f start_pos = world_->getStartPosition2D();
+    cv::Point2f goal_pos = world_->getGoalPosition2D();
     std::cout << "Start: (" << start_pos.x << ", " << start_pos.y << ")" << std::endl;
     std::cout << "Goal: (" << goal_pos.x << ", " << goal_pos.y << ")" << std::endl;
     std::cout << "Initial distance to goal: " << cv::norm(goal_pos - start_pos) << std::endl;
@@ -253,15 +270,17 @@ void Simulator::handleUserInput() {
             break;
         case 'v':
         case 'V':
-            if (ui_) {
-                if (ui_->isRecording()) {
-                    ui_->stopRecording();
-                    std::cout << "Video recording stopped" << std::endl;
-                } else {
-                    ui_->startRecording("recording.mp4", 30);
-                    std::cout << "Video recording started" << std::endl;
-                }
-            }
+            // TODO: Implement video recording for 3D UI
+            // if (ui_) {
+            //     if (ui_->isRecording()) {
+            //         ui_->stopRecording();
+            //         std::cout << "Video recording stopped" << std::endl;
+            //     } else {
+            //         ui_->startRecording("recording.mp4", 30);
+            //         std::cout << "Video recording started" << std::endl;
+            //     }
+            // }
+            std::cout << "Video recording not yet implemented in 3D UI" << std::endl;
             break;
         case 27: // ESC
             running_ = false;
@@ -276,7 +295,9 @@ void Simulator::updateSimulation() {
     if (environment_->isDone()) {
         // Episode completed, get results
         auto episode_result = environment_->getCurrentObservation();
-        float final_distance = drone_->getDistanceToGoal(world_->getGoalPosition());
+        cv::Point2f goal_pos_2d = world_->getGoalPosition2D(); // Use 2D getter for backward compatibility
+        cv::Point3f goal_pos_3d(goal_pos_2d.x, goal_pos_2d.y, 50.0f); // Convert to 3D with default altitude
+        float final_distance = drone_->getDistanceToGoal(goal_pos_3d);
         
         std::cout << "Episode " << episode_count_ << " completed!" << std::endl;
         std::cout << "Final distance to goal: " << final_distance << std::endl;
@@ -318,13 +339,16 @@ void Simulator::updateSimulation() {
     static int progress_counter = 0;
     progress_counter++;
     if (progress_counter % 50 == 0) {
-        float current_distance = drone_->getDistanceToGoal(world_->getGoalPosition());
-        cv::Point2f current_pos = drone_->getState().position;
+        cv::Point2f goal_pos_2d = world_->getGoalPosition2D(); // Use 2D getter for backward compatibility
+        cv::Point3f goal_pos_3d(goal_pos_2d.x, goal_pos_2d.y, 50.0f); // Convert to 3D with default altitude
+        float current_distance = drone_->getDistanceToGoal(goal_pos_3d);
+        cv::Point3f current_pos_3d = drone_->getState().position;
+        cv::Point2f current_pos_2d(current_pos_3d.x, current_pos_3d.y); // Convert to 2D for backward compatibility
         
         std::cout << "Step " << progress_counter << ": ";
-        std::cout << "Pos(" << current_pos.x << ", " << current_pos.y << ") ";
+        std::cout << "Pos(" << current_pos_2d.x << ", " << current_pos_2d.y << ", " << current_pos_3d.z << ") ";
         std::cout << "Distance: " << current_distance << " ";
-        std::cout << "In Bounds: " << (world_->isInBounds(current_pos) ? "YES" : "NO") << std::endl;
+        std::cout << "In Bounds: " << (world_->isInBounds(current_pos_2d) ? "YES" : "NO") << std::endl;
         
         // Show current reward
         float current_reward = environment_->getCurrentReward();
@@ -341,7 +365,7 @@ void Simulator::renderFrame() {
     
     // Draw optimal path if available
     if (environment_) {
-        auto optimal_path = environment_->getOptimalPath();
+        auto optimal_path = environment_->getOptimalPath(); // This gets the 2D path
         if (!optimal_path.empty()) {
             // Draw the complete path
             for (size_t i = 0; i < optimal_path.size() - 1; ++i) {
@@ -362,17 +386,18 @@ void Simulator::renderFrame() {
         }
     }
     
-    // Draw drone on the display
-    cv::Point2f drone_pos = drone_->getState().position;
-    cv::circle(display, drone_pos, 15, cv::Scalar(255, 0, 0), -1); // Blue circle for drone
+    // Draw drone on the display (convert 3D to 2D for backward compatibility)
+    cv::Point3f drone_pos_3d = drone_->getState().position;
+    cv::Point2f drone_pos_2d(drone_pos_3d.x, drone_pos_3d.y); // Convert to 2D for rendering
+    cv::circle(display, drone_pos_2d, 15, cv::Scalar(255, 0, 0), -1); // Blue circle for drone
     
     // Draw drone heading
     float heading = drone_->getState().heading;
-    cv::Point2f heading_end = drone_pos + cv::Point2f(20 * cos(heading), 20 * sin(heading));
-    cv::arrowedLine(display, drone_pos, heading_end, cv::Scalar(0, 255, 0), 3);
+    cv::Point2f heading_end = drone_pos_2d + cv::Point2f(20 * cos(heading), 20 * sin(heading));
+    cv::arrowedLine(display, drone_pos_2d, heading_end, cv::Scalar(0, 255, 0), 3);
     
-    // Draw goal position
-    cv::Point2f goal_pos = world_->getGoalPosition();
+    // Draw goal position (use 2D getter for backward compatibility)
+    cv::Point2f goal_pos = world_->getGoalPosition2D();
     cv::circle(display, goal_pos, 20, cv::Scalar(0, 0, 255), 3); // Red circle for goal
     
     // Add text information
@@ -384,36 +409,32 @@ void Simulator::renderFrame() {
                 paused_ ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 255, 0), 2);
     
     // Show current distance to goal
-    float distance_to_goal = drone_->getDistanceToGoal(goal_pos);
+    cv::Point2f goal_pos_2d = world_->getGoalPosition2D(); // Use 2D getter for backward compatibility
+    cv::Point3f goal_pos_3d(goal_pos_2d.x, goal_pos_2d.y, 50.0f); // Convert to 3D with default altitude
+    float distance_to_goal = drone_->getDistanceToGoal(goal_pos_3d);
     std::string distance_text = "Distance: " + std::to_string(static_cast<int>(distance_to_goal));
     cv::putText(display, distance_text, cv::Point(10, 90), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
+    
+    // Show current altitude
+    float current_altitude = drone_->getState().position.z;
+    std::string altitude_text = "Altitude: " + std::to_string(static_cast<int>(current_altitude));
+    cv::putText(display, altitude_text, cv::Point(10, 120), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
     
     // Show current reward if available
     if (environment_) {
         float current_reward = environment_->getCurrentReward();
         std::string reward_text = "Reward: " + std::to_string(static_cast<int>(current_reward));
-        cv::putText(display, reward_text, cv::Point(10, 120), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
+        cv::putText(display, reward_text, cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
     }
     
-    // Add UI elements
+    // Add UI elements (simplified for 3D compatibility)
     if (ui_) {
-        // Update path trace
-        ui_->addPathPoint(drone_pos);
+        // Get current paths for visualization
+        auto path_3d = environment_->getOptimalPath3D();
+        auto path_2d = environment_->getOptimalPath();
         
-        // Render UI overlay
-        ui_->renderUI(*environment_);
-        
-        // Get the UI display buffer and overlay it
-        cv::Mat ui_overlay = ui_->getDisplayBuffer();
-        if (!ui_overlay.empty()) {
-            // Resize UI overlay to match main display if needed
-            if (ui_overlay.size() != display.size()) {
-                cv::resize(ui_overlay, ui_overlay, display.size());
-            }
-            
-            // Blend UI overlay with main display
-            cv::addWeighted(display, 0.8, ui_overlay, 0.2, 0, display);
-        }
+        // Render 3D scene
+        ui_->render3D(*world_, *drone_, path_3d, path_2d);
     }
     
     // Show the frame
@@ -427,11 +448,18 @@ void Simulator::recordFrame() {
 std::shared_ptr<agent::Agent> Simulator::createAgent() {
     agent::AgentConfig config;
     config.use_vision = use_vision_track_;
+    config.use_3d = true; // Enable 3D mode
     config.observation_stack = 4;
     config.learning_rate = 0.001f;
     config.discount_factor = 0.99f;
     config.epsilon = 0.1f;
     config.replay_buffer_size = 10000;
+    
+    // 3D specific configuration
+    config.max_altitude = 300.0f;
+    config.min_altitude = 10.0f;
+    config.altitude_safety_margin = 15.0f;
+    config.enable_3d_pathfinding = true;
     
     if (use_vision_track_) {
         return std::make_shared<agent::VisionAgent>(config);

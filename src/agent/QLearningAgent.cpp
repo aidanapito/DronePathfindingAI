@@ -13,7 +13,10 @@ QLearningAgent::QLearningAgent(const AgentConfig& config)
       is_panic_mode_(false), panic_counter_(0), is_goal_seeking_(false), wall_following_steps_(0) {
 }
 
-Action QLearningAgent::selectAction(const Observation& obs, const std::vector<Action>& valid_actions) {
+Action QLearningAgent::selectAction(const Observation& obs, const sim::Drone& drone) {
+    // Get valid actions from the drone
+    std::vector<Action> valid_actions = getValidActions(drone);
+    
     if (valid_actions.empty()) {
         return Action::IDLE;
     }
@@ -71,7 +74,9 @@ Action QLearningAgent::selectAction(const Observation& obs, const std::vector<Ac
             backtrack_path_.clear();
             std::cout << "Backtracking completed, returning to normal mode" << std::endl;
         } else {
-            Action action = selectBacktrackAction(obs.position, obs.heading, valid_actions);
+            // Convert 3D position to 2D for backward compatibility
+            cv::Point2f pos_2d(obs.position.x, obs.position.y);
+            Action action = selectBacktrackAction(pos_2d, obs.heading, valid_actions);
             return action;
         }
     }
@@ -90,7 +95,8 @@ void QLearningAgent::updatePolicy(const Observation& obs, Action action,
     QState next_state = discretizeState(next_obs);
     
     // Update path history
-    updatePathHistory(obs.position, obs.heading, reward);
+    cv::Point2f pos_2d(obs.position.x, obs.position.y);
+    updatePathHistory(pos_2d, obs.heading, reward);
     
     // Update Q-values
     updateQValue(state, action, reward, next_state, done);
@@ -186,17 +192,12 @@ float QLearningAgent::getAverageQValue() const {
 }
 
 QState QLearningAgent::discretizeState(const Observation& obs) const {
-    QState state;
+    // Convert 3D position to 2D for backward compatibility with grid-based logic
+    cv::Point2f pos_2d(obs.position.x, obs.position.y);
+    auto grid_pos = worldToGrid(pos_2d);
+    int heading_bucket = headingToBucket(obs.heading);
     
-    // Discretize grid position using actual drone position
-    auto grid_pos = worldToGrid(obs.position);
-    state.grid_x = grid_pos.first;
-    state.grid_y = grid_pos.second;
-    
-    // Discretize heading
-    state.heading_bucket = headingToBucket(obs.heading);
-    
-    return state;
+    return QState{grid_pos.first, grid_pos.second, heading_bucket};
 }
 
 Action QLearningAgent::epsilonGreedyAction(const QState& state, const std::vector<Action>& valid_actions) {
@@ -862,6 +863,21 @@ Action QLearningAgent::selectGoalSeekingAction(const QState& state, const std::v
     
     // Fallback to random valid action
     return valid_actions[rand() % valid_actions.size()];
+}
+
+Action QLearningAgent::selectExplorationAction(const Observation& obs, const std::vector<Action>& valid_actions) {
+    if (valid_actions.empty()) {
+        return Action::IDLE;
+    }
+    
+    // Convert Observation to QState for exploration
+    QState state;
+    state.grid_x = static_cast<int>(obs.position_2d.x / grid_resolution_);
+    state.grid_y = static_cast<int>(obs.position_2d.y / grid_resolution_);
+    state.heading_bucket = static_cast<int>(obs.heading / (2.0f * M_PI / num_heading_buckets_));
+    
+    // Use the existing QState-based exploration method
+    return selectExplorationAction(state, valid_actions);
 }
 
 } // namespace agent

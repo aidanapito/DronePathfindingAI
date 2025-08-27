@@ -176,6 +176,9 @@ private:
     // Last action tracking for reward shaping
     agent::Action last_action_;
     
+    // World dimensions for 3D calculations
+    int depth_;
+    
     // Helper methods
     float calculateReward() const;
     bool checkEpisodeTermination() const;

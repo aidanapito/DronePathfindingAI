@@ -12,410 +12,351 @@
 
 namespace ui {
 
-SimulatorUI::SimulatorUI(const UIConfig& config) 
-    : config_(config), current_mode_(UIMode::SIMULATION), 
-      show_debug_overlay_(false), current_fps_(0.0f), 
-      last_frame_time_(std::chrono::high_resolution_clock::now()) {
+SimulatorUI::SimulatorUI() 
+    : window_created_(false), show_grid_(true), show_axes_(true), 
+      show_path_(true), show_obstacles_(true), show_drone_(true), 
+      show_goal_(true), render_mode_("3D"), mouse_dragging_(false), 
+      mouse_right_dragging_(false) {
     
-    // Initialize display buffer
-    display_buffer_ = cv::Mat::zeros(config.window_height, config.window_width, CV_8UC3);
+    // Initialize colors
+    grid_color_ = cv::Scalar(100, 100, 100);
+    axes_color_ = cv::Scalar(255, 255, 255);
+    path_color_ = cv::Scalar(0, 255, 0);
+    drone_color_ = cv::Scalar(255, 0, 0);
+    goal_color_ = cv::Scalar(0, 0, 255);
+    obstacle_color_ = cv::Scalar(128, 128, 128);
+    background_color_ = cv::Scalar(50, 50, 100);
     
-    std::cout << "UI initialized: " << config.window_width << "x" << config.window_height << std::endl;
+    // Initialize current frame
+    current_frame_ = cv::Mat::zeros(800, 1200, CV_8UC3);
+    
+    std::cout << "UI initialized with default settings" << std::endl;
 }
 
-void SimulatorUI::render(const sim::World& world, const sim::Drone& drone, 
-                         const agent::Agent* agent) {
-    // Clear the display buffer
-    display_buffer_ = cv::Mat::zeros(config_.window_height, config_.window_width, CV_8UC3);
+void SimulatorUI::render2D(const sim::World& world, const sim::Drone& drone, 
+                           const std::vector<cv::Point2f>& path) {
+    // Clear the current frame
+    current_frame_ = cv::Mat::zeros(800, 1200, CV_8UC3);
     
-    // Render world (this will be called from the main simulator)
-    // renderWorld(world);
-    
-    // Render drone
-    renderDrone(drone);
-    
-    // Render path trace if enabled
-    if (config_.show_path_trace) {
-        renderPathTrace();
+    // Render 2D grid
+    if (show_grid_) {
+        render2DGrid();
     }
     
-    // Render collision boxes if enabled
-    if (config_.show_collision_boxes) {
-        renderCollisionBoxes(world);
+    // Render 2D obstacles
+    if (show_obstacles_) {
+        render2DObstacles(world);
     }
     
-    // Render FPS if enabled
-    if (config_.show_fps) {
-        renderFPS();
+    // Render 2D drone
+    if (show_drone_) {
+        render2DDrone(drone);
     }
     
-    // Update FPS calculation
-    auto current_time = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_frame_time_);
-    if (elapsed.count() > 0) {
-        current_fps_ = 1000000.0f / elapsed.count();
-    }
-    last_frame_time_ = current_time;
-}
-
-void SimulatorUI::renderUI(const bridge::Environment& env) {
-    if (config_.show_debug_info) {
-        renderDebugInfo(env);
+    // Render 2D path
+    if (show_path_ && !path.empty()) {
+        render2DPath(path);
     }
     
-    if (config_.show_reward_info) {
-        float current_reward = env.getCurrentReward();
-        renderRewardInfo(current_reward);
+    // Render 2D goal
+    if (show_goal_) {
+        render2DGoal(world);
     }
 }
 
-bool SimulatorUI::handleKeyPress(int key) {
-    switch (key) {
-        case 'p':
-        case 'P':
-            handlePauseKey();
-            return true;
-        case 'm':
-        case 'M':
-            handleManualModeKey();
-            return true;
-        case 'v':
-        case 'V':
-            handleRecordKey();
-            return true;
-        case 'n':
-        case 'N':
-            handleNewMapKey();
-            return true;
-        case 'r':
-        case 'R':
-            handleResetKey();
-            return true;
-        default:
-            return false;
+void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone, 
+                           const std::vector<cv::Point3f>& path_3d,
+                           const std::vector<cv::Point2f>& path_2d) {
+    // Clear the current frame
+    current_frame_ = cv::Mat::zeros(800, 1200, CV_8UC3);
+    
+    // Render 3D grid
+    if (show_grid_) {
+        render3DGrid();
+    }
+    
+    // Render 3D axes
+    if (show_axes_) {
+        render3DAxes();
+    }
+    
+    // Render 3D obstacles
+    if (show_obstacles_) {
+        render3DObstacles(world);
+    }
+    
+    // Render 3D drone
+    if (show_drone_) {
+        render3DDrone(drone);
+    }
+    
+    // Render 3D path
+    if (show_path_ && (!path_3d.empty() || !path_2d.empty())) {
+        render3DPath(path_3d, path_2d);
+    }
+    
+    // Render 3D goal
+    if (show_goal_) {
+        render3DGoal(world);
     }
 }
 
-void SimulatorUI::handleMouseEvent(int event, int x, int y, int flags) {
-    // Handle mouse events for interactive features
-    switch (event) {
-        case cv::EVENT_LBUTTONDOWN:
-            // Left click - could be used for setting waypoints or selecting objects
-            std::cout << "Mouse click at (" << x << ", " << y << ")" << std::endl;
-            break;
-        case cv::EVENT_RBUTTONDOWN:
-            // Right click - could be used for context menu
-            std::cout << "Right click at (" << x << ", " << y << ")" << std::endl;
-            break;
-        case cv::EVENT_MOUSEMOVE:
-            // Mouse movement - could be used for hover effects
-            break;
+void SimulatorUI::orbitCamera(float delta_azimuth, float delta_elevation) {
+    // Convert camera position to spherical coordinates
+    float dx = camera_3d_.position.x - camera_3d_.target.x;
+    float dy = camera_3d_.position.y - camera_3d_.target.y;
+    float dz = camera_3d_.position.z - camera_3d_.target.z;
+    
+    float radius = std::sqrt(dx*dx + dy*dy + dz*dz);
+    float azimuth = std::atan2(dy, dx);
+    float elevation = std::asin(dz / radius);
+    
+    // Update angles
+    azimuth += delta_azimuth;
+    elevation += delta_elevation;
+    
+    // Clamp elevation to prevent gimbal lock
+    float min_elevation = -M_PI/2.0f + 0.1f;
+    float max_elevation = M_PI/2.0f - 0.1f;
+    elevation = std::max(min_elevation, std::min(max_elevation, elevation));
+    
+    // Convert back to Cartesian coordinates
+    camera_3d_.position.x = camera_3d_.target.x + radius * std::cos(elevation) * std::cos(azimuth);
+    camera_3d_.position.y = camera_3d_.target.y + radius * std::cos(elevation) * std::sin(azimuth);
+    camera_3d_.position.z = camera_3d_.target.z + radius * std::sin(elevation);
+}
+
+void SimulatorUI::zoomCamera(float delta_distance) {
+    // Calculate direction vector from target to camera
+    cv::Point3f direction = camera_3d_.position - camera_3d_.target;
+    float current_distance = std::sqrt(direction.x*direction.x + direction.y*direction.y + direction.z*direction.z);
+    
+    // Update distance
+    float new_distance = std::max(10.0f, current_distance + delta_distance);
+    
+    // Normalize direction and scale to new distance
+    direction = direction * (new_distance / current_distance);
+    camera_3d_.position = camera_3d_.target + direction;
+}
+
+void SimulatorUI::panCamera(float delta_x, float delta_y) {
+    // Calculate right and up vectors
+    cv::Point3f direction = camera_3d_.target - camera_3d_.position;
+    cv::Point3f right = direction.cross(camera_3d_.up);
+    right = right * (1.0f / std::sqrt(right.x*right.x + right.y*right.y + right.z*right.z));
+    
+    cv::Point3f up = right.cross(direction);
+    up = up * (1.0f / std::sqrt(up.x*up.x + up.y*up.y + up.z*up.z));
+    
+    // Pan camera and target
+    float pan_speed = 10.0f;
+    camera_3d_.position += right * (delta_x * pan_speed) + up * (delta_y * pan_speed);
+    camera_3d_.target += right * (delta_x * pan_speed) + up * (delta_y * pan_speed);
+}
+
+void SimulatorUI::resetCamera() {
+    camera_3d_ = Camera3D();
+}
+
+void SimulatorUI::createWindow(const std::string& name, int width, int height) {
+    window_name_ = name;
+    current_frame_ = cv::Mat::zeros(height, width, CV_8UC3);
+    cv::namedWindow(window_name_, cv::WINDOW_AUTOSIZE);
+    window_created_ = true;
+}
+
+void SimulatorUI::updateWindow() {
+    if (window_created_) {
+        cv::imshow(window_name_, current_frame_);
+        cv::waitKey(1);
     }
 }
 
-void SimulatorUI::setMode(UIMode mode) {
-    current_mode_ = mode;
-}
-
-void SimulatorUI::startRecording(const std::string& output_path, int fps) {
-    if (video_writer_.isOpened()) {
-        stopRecording();
-    }
-    
-    // Create video writer
-    int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-    bool success = video_writer_.open(output_path, fourcc, fps, 
-                                     cv::Size(config_.window_width, config_.window_height));
-    
-    if (success) {
-        current_mode_ = UIMode::RECORDING;
-        std::cout << "Started recording to: " << output_path << " at " << fps << " FPS" << std::endl;
-    } else {
-        std::cerr << "Failed to start recording to: " << output_path << std::endl;
+void SimulatorUI::closeWindow() {
+    if (window_created_) {
+        cv::destroyWindow(window_name_);
+        window_created_ = false;
     }
 }
 
-void SimulatorUI::stopRecording() {
-    if (video_writer_.isOpened()) {
-        video_writer_.release();
-        current_mode_ = UIMode::SIMULATION;
-        std::cout << "Recording stopped" << std::endl;
+void SimulatorUI::handleMouseEvents() {
+    // Mouse event handling would be implemented here
+    // This is a placeholder for future implementation
+}
+
+void SimulatorUI::handleKeyboardEvents() {
+    // Keyboard event handling would be implemented here
+    // This is a placeholder for future implementation
+}
+
+
+
+void SimulatorUI::saveFrame(const std::string& filename) const {
+    cv::imwrite(filename, current_frame_);
+}
+
+// Private helper methods
+
+void SimulatorUI::render3DGrid() {
+    // Render a simple 3D grid
+    for (int x = 0; x < 1200; x += 50) {
+        cv::line(current_frame_, cv::Point(x, 0), cv::Point(x, 800), grid_color_, 1);
+    }
+    for (int y = 0; y < 800; y += 50) {
+        cv::line(current_frame_, cv::Point(0, y), cv::Point(1200, y), grid_color_, 1);
     }
 }
 
-void SimulatorUI::setConfig(const UIConfig& config) {
-    config_ = config;
+void SimulatorUI::render3DAxes() {
+    // Render 3D coordinate axes
+    cv::Point2f origin = project3DTo2D(cv::Point3f(0, 0, 0));
+    cv::Point2f x_axis = project3DTo2D(cv::Point3f(100, 0, 0));
+    cv::Point2f y_axis = project3DTo2D(cv::Point3f(0, 100, 0));
+    cv::Point2f z_axis = project3DTo2D(cv::Point3f(0, 0, 100));
+    
+    cv::line(current_frame_, origin, x_axis, cv::Scalar(255, 0, 0), 2); // X axis (red)
+    cv::line(current_frame_, origin, y_axis, cv::Scalar(0, 255, 0), 2); // Y axis (green)
+    cv::line(current_frame_, origin, z_axis, cv::Scalar(0, 0, 255), 2); // Z axis (blue)
 }
 
-void SimulatorUI::renderWorld(const sim::World& world) {
-    // TODO: Implement world rendering
-}
-
-void SimulatorUI::renderDrone(const sim::Drone& drone) {
-    auto state = drone.getState();
-    cv::Point2f drone_pos = worldToScreen(state.position);
-    
-    // Draw drone body (blue circle)
-    cv::circle(display_buffer_, drone_pos, 20, cv::Scalar(255, 0, 0), -1);
-    
-    // Draw drone border (white outline)
-    cv::circle(display_buffer_, drone_pos, 20, cv::Scalar(255, 255, 255), 2);
-    
-    // Draw drone heading (green arrow)
-    float heading = state.heading;
-    cv::Point2f heading_end = drone_pos + cv::Point2f(30 * cos(heading), 30 * sin(heading));
-    drawArrow(display_buffer_, drone_pos, heading_end, cv::Scalar(0, 255, 0), 3);
-    
-    // Draw drone status indicators
-    if (drone.isEmergencyStop()) {
-        // Red warning circle for emergency stop
-        cv::circle(display_buffer_, drone_pos, 25, cv::Scalar(0, 0, 255), 3);
-    }
-    
-    // Draw velocity indicator (small arrow showing movement direction)
-    if (std::abs(state.velocity) > 0.1f) {
-        float velocity_angle = atan2(state.velocity, 0.0f); // Assuming forward velocity
-        cv::Point2f vel_end = drone_pos + cv::Point2f(15 * cos(velocity_angle), 15 * sin(velocity_angle));
-        drawArrow(display_buffer_, drone_pos, vel_end, cv::Scalar(255, 255, 0), 2);
-    }
-    
-    // Draw drone label
-    std::string drone_label = "DRONE";
-    cv::Point label_pos(drone_pos.x - 25, drone_pos.y - 30);
-    drawText(display_buffer_, drone_label, label_pos, cv::Scalar(255, 255, 255), 0.5);
-}
-
-void SimulatorUI::renderPathTrace() {
-    if (path_trace_.size() < 2) return;
-    
-    // Draw the complete path trace
-    for (size_t i = 0; i < path_trace_.size() - 1; ++i) {
-        cv::Point2f screen_start = worldToScreen(path_trace_[i]);
-        cv::Point2f screen_end = worldToScreen(path_trace_[i + 1]);
-        
-        // Use different colors based on path age (fade from bright to dim)
-        float alpha = static_cast<float>(i) / path_trace_.size();
-        cv::Scalar color(255 * alpha, 255 * alpha, 255 * alpha);
-        
-        cv::line(display_buffer_, screen_start, screen_end, color, 1);
-    }
-    
-    // Draw path trace points
-    for (size_t i = 0; i < path_trace_.size(); i += 5) { // Every 5th point to avoid clutter
-        cv::Point2f screen_pos = worldToScreen(path_trace_[i]);
-        cv::circle(display_buffer_, screen_pos, 2, cv::Scalar(200, 200, 200), -1);
+void SimulatorUI::render3DObstacles(const sim::World& world) {
+    // Get obstacles from world and render them in 3D
+    const auto& obstacles = world.getObstacles();
+    for (const auto& obs : obstacles) {
+        cv::Point2f screen_pos = project3DTo2D(obs.position);
+        if (screen_pos.x >= 0 && screen_pos.x < 1200 && screen_pos.y >= 0 && screen_pos.y < 800) {
+            float screen_radius = obs.radius * 2.0f; // Scale for visibility
+            cv::circle(current_frame_, screen_pos, screen_radius, obstacle_color_, -1);
+        }
     }
 }
 
-// Add method to update path trace
-void SimulatorUI::addPathPoint(const cv::Point2f& world_pos) {
-    path_trace_.push_back(world_pos);
-    
-    // Limit path trace length to prevent memory issues
-    if (path_trace_.size() > 1000) {
-        path_trace_.erase(path_trace_.begin());
+void SimulatorUI::render3DDrone(const sim::Drone& drone) {
+    // Get drone position and render it in 3D
+    cv::Point3f drone_pos = drone.getState().position;
+    cv::Point2f screen_pos = project3DTo2D(drone_pos);
+    if (screen_pos.x >= 0 && screen_pos.x < 1200 && screen_pos.y >= 0 && screen_pos.y < 800) {
+        cv::circle(current_frame_, screen_pos, DRONE_SIZE, drone_color_, -1);
     }
 }
 
-void SimulatorUI::renderDebugInfo(const bridge::Environment& env) {
-    // Create debug info panel (top-left corner)
-    cv::Point panel_start(10, 10);
-    cv::Point panel_end(350, 200);
-    
-    // Draw semi-transparent background
-    cv::Mat overlay = display_buffer_.clone();
-    cv::rectangle(overlay, panel_start, panel_end, cv::Scalar(0, 0, 0), -1);
-    cv::addWeighted(display_buffer_, 0.7, overlay, 0.3, 0, display_buffer_);
-    
-    // Draw panel border
-    cv::rectangle(display_buffer_, panel_start, panel_end, cv::Scalar(255, 255, 255), 2);
-    
-    // Render debug information
-    int y_offset = 30;
-    int line_height = 20;
-    
-    // Title
-    drawText(display_buffer_, "DEBUG INFO", cv::Point(20, y_offset), cv::Scalar(255, 255, 0), 0.8);
-    y_offset += line_height + 5;
-    
-    // Episode info
-    std::string episode_info = "Episode: " + std::to_string(env.getEpisodeCount());
-    drawText(display_buffer_, episode_info, cv::Point(20, y_offset), cv::Scalar(255, 255, 255), 0.6);
-    y_offset += line_height;
-    
-    // Current step
-    std::string step_info = "Step: " + std::to_string(env.getCurrentStep());
-    drawText(display_buffer_, step_info, cv::Point(20, y_offset), cv::Scalar(255, 255, 255), 0.6);
-    y_offset += line_height;
-    
-    // Current reward
-    float current_reward = env.getCurrentReward();
-    std::string reward_info = "Reward: " + std::to_string(current_reward);
-    cv::Scalar reward_color = (current_reward > 0) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
-    drawText(display_buffer_, reward_info, cv::Point(20, y_offset), reward_color, 0.6);
-    y_offset += line_height;
-    
-    // Pathfinding info
-    if (env.getUsePathfinding()) {
-        auto optimal_path = env.getOptimalPath();
-        std::string path_info = "Path: " + std::to_string(optimal_path.size()) + " waypoints";
-        drawText(display_buffer_, path_info, cv::Point(20, y_offset), cv::Scalar(0, 255, 255), 0.6);
-        y_offset += line_height;
-        
-        int current_waypoint = env.getCurrentWaypointIndex();
-        std::string waypoint_info = "Waypoint: " + std::to_string(current_waypoint + 1) + "/" + std::to_string(optimal_path.size());
-        drawText(display_buffer_, waypoint_info, cv::Point(20, y_offset), cv::Scalar(0, 255, 255), 0.6);
-        y_offset += line_height;
+void SimulatorUI::render3DPath(const std::vector<cv::Point3f>& path_3d, 
+                               const std::vector<cv::Point2f>& path_2d) {
+    // Render 3D path
+    if (!path_3d.empty()) {
+        for (size_t i = 1; i < path_3d.size(); ++i) {
+            cv::Point2f start = project3DTo2D(path_3d[i-1]);
+            cv::Point2f end = project3DTo2D(path_3d[i]);
+            if (start.x >= 0 && start.x < 1200 && start.y >= 0 && start.y < 800 &&
+                end.x >= 0 && end.x < 1200 && end.y >= 0 && end.y < 800) {
+                cv::line(current_frame_, start, end, path_color_, 2);
+            }
+        }
     }
     
-    // Agent info
-    std::string agent_info = "Agent: " + env.getPathfindingAlgorithm();
-    drawText(display_buffer_, agent_info, cv::Point(20, y_offset), cv::Scalar(255, 255, 255), 0.6);
-    y_offset += line_height;
-    
-    // Mode info
-    std::string mode_info = "Mode: " + getModeString();
-    drawText(display_buffer_, mode_info, cv::Point(20, y_offset), cv::Scalar(255, 255, 255), 0.6);
-}
-
-std::string SimulatorUI::getModeString() const {
-    switch (current_mode_) {
-        case UIMode::SIMULATION: return "SIMULATION";
-        case UIMode::MANUAL_PILOT: return "MANUAL";
-        case UIMode::PAUSED: return "PAUSED";
-        case UIMode::RECORDING: return "RECORDING";
-        default: return "UNKNOWN";
+    // Render 2D path (top-down view)
+    if (!path_2d.empty()) {
+        for (size_t i = 1; i < path_2d.size(); ++i) {
+            cv::Point2f start = path_2d[i-1];
+            cv::Point2f end = path_2d[i];
+            cv::line(current_frame_, start, end, cv::Scalar(0, 255, 255), 1);
+        }
     }
 }
 
-void SimulatorUI::renderCollisionBoxes(const sim::World& world) {
-    // Get drone position for collision visualization
-    // This is a simplified collision box rendering
-    // In a full implementation, you'd get the actual collision boundaries
-    
-    // Draw safety margin around drone (if available)
-    // For now, we'll just show a general safety zone
-}
-
-void SimulatorUI::renderRewardInfo(float reward) {
-    // Create reward info panel (top-right corner)
-    cv::Point panel_start(display_buffer_.cols - 200, 10);
-    cv::Point panel_end(display_buffer_.cols - 10, 80);
-    
-    // Draw semi-transparent background
-    cv::Mat overlay = display_buffer_.clone();
-    cv::rectangle(overlay, panel_start, panel_end, cv::Scalar(0, 0, 0), -1);
-    cv::addWeighted(display_buffer_, 0.7, overlay, 0.3, 0, display_buffer_);
-    
-    // Draw panel border
-    cv::Scalar border_color = (reward > 0) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
-    cv::rectangle(display_buffer_, panel_start, panel_end, border_color, 2);
-    
-    // Render reward information
-    cv::Point text_pos(panel_start.x + 10, panel_start.y + 25);
-    drawText(display_buffer_, "REWARD", text_pos, cv::Scalar(255, 255, 255), 0.7);
-    
-    std::string reward_text = std::to_string(static_cast<int>(reward));
-    cv::Point value_pos(panel_start.x + 10, panel_start.y + 50);
-    drawText(display_buffer_, reward_text, value_pos, border_color, 0.8);
-}
-
-void SimulatorUI::renderFPS() {
-    // Display FPS in top-right corner
-    std::string fps_text = "FPS: " + std::to_string(static_cast<int>(current_fps_));
-    cv::Point fps_pos(display_buffer_.cols - 120, 30);
-    
-    // Color code FPS
-    cv::Scalar fps_color;
-    if (current_fps_ > 50) fps_color = cv::Scalar(0, 255, 0);      // Green for good
-    else if (current_fps_ > 30) fps_color = cv::Scalar(0, 255, 255); // Yellow for acceptable
-    else fps_color = cv::Scalar(0, 0, 255);                          // Red for poor
-    
-    drawText(display_buffer_, fps_text, fps_pos, fps_color, 0.6);
-}
-
-cv::Point2f SimulatorUI::screenToWorld(const cv::Point2f& screen_pos) const {
-    // Convert screen coordinates to world coordinates
-    // This is a simplified conversion - in a real implementation you'd have proper scaling
-    return screen_pos;
-}
-
-cv::Point2f SimulatorUI::worldToScreen(const cv::Point2f& world_pos) const {
-    // Convert world coordinates to screen coordinates
-    // This is a simplified conversion - in a real implementation you'd have proper scaling
-    return world_pos;
-}
-
-void SimulatorUI::drawArrow(cv::Mat& img, const cv::Point2f& start, const cv::Point2f& end, 
-                            const cv::Scalar& color, int thickness) {
-    // Draw the main line
-    cv::line(img, start, end, color, thickness);
-    
-    // Calculate arrow head
-    float angle = atan2(end.y - start.y, end.x - start.x);
-    float arrow_length = 15.0f;
-    
-    cv::Point2f arrow_head1 = end - cv::Point2f(arrow_length * cos(angle - M_PI/6), 
-                                                 arrow_length * sin(angle - M_PI/6));
-    cv::Point2f arrow_head2 = end - cv::Point2f(arrow_length * cos(angle + M_PI/6), 
-                                                 arrow_length * sin(angle + M_PI/6));
-    
-    // Draw arrow head
-    cv::line(img, end, arrow_head1, color, thickness);
-    cv::line(img, end, arrow_head2, color, thickness);
-}
-
-void SimulatorUI::drawText(cv::Mat& img, const std::string& text, const cv::Point& pos, 
-                           const cv::Scalar& color, double scale) {
-    cv::putText(img, text, pos, cv::FONT_HERSHEY_SIMPLEX, scale, color, 2);
-}
-
-void SimulatorUI::handlePauseKey() {
-    if (current_mode_ == UIMode::PAUSED) {
-        current_mode_ = UIMode::SIMULATION;
-        std::cout << "Simulation resumed" << std::endl;
-    } else {
-        current_mode_ = UIMode::PAUSED;
-        std::cout << "Simulation paused" << std::endl;
+void SimulatorUI::render3DGoal(const sim::World& world) {
+    // Get goal position and render it in 3D
+    cv::Point3f goal_pos = world.getGoalPosition();
+    cv::Point2f screen_pos = project3DTo2D(goal_pos);
+    if (screen_pos.x >= 0 && screen_pos.x < 1200 && screen_pos.y >= 0 && screen_pos.y < 800) {
+        cv::circle(current_frame_, screen_pos, GOAL_SIZE, goal_color_, -1);
     }
 }
 
-void SimulatorUI::handleManualModeKey() {
-    if (current_mode_ == UIMode::MANUAL_PILOT) {
-        current_mode_ = UIMode::SIMULATION;
-        std::cout << "Switched to simulation mode" << std::endl;
-    } else {
-        current_mode_ = UIMode::MANUAL_PILOT;
-        std::cout << "Switched to manual pilot mode" << std::endl;
+void SimulatorUI::render2DGrid() {
+    // Render a simple 2D grid
+    for (int x = 0; x < 1200; x += 50) {
+        cv::line(current_frame_, cv::Point(x, 0), cv::Point(x, 800), grid_color_, 1);
+    }
+    for (int y = 0; y < 800; y += 50) {
+        cv::line(current_frame_, cv::Point(0, y), cv::Point(1200, y), grid_color_, 1);
     }
 }
 
-void SimulatorUI::handleRecordKey() {
-    if (current_mode_ == UIMode::RECORDING) {
-        stopRecording();
-    } else {
-        startRecording("recording.mp4", 30);
+void SimulatorUI::render2DObstacles(const sim::World& world) {
+    // Get obstacles from world and render them in 2D
+    const auto& obstacles = world.getObstacles();
+    for (const auto& obs : obstacles) {
+        cv::Point2f pos(obs.position.x, obs.position.y);
+        if (pos.x >= 0 && pos.x < 1200 && pos.y >= 0 && pos.y < 800) {
+            cv::circle(current_frame_, pos, obs.radius, obstacle_color_, -1);
+        }
     }
 }
 
-void SimulatorUI::handleNewMapKey() {
-    std::cout << "New map requested" << std::endl;
-    // This will be handled by the main simulator
+void SimulatorUI::render2DDrone(const sim::Drone& drone) {
+    // Get drone position and render it in 2D
+    cv::Point3f drone_pos = drone.getState().position;
+    cv::Point2f pos(drone_pos.x, drone_pos.y);
+    if (pos.x >= 0 && pos.x < 1200 && pos.y >= 0 && pos.y < 800) {
+        cv::circle(current_frame_, pos, DRONE_SIZE, drone_color_, -1);
+    }
 }
 
-void SimulatorUI::handleResetKey() {
-    std::cout << "Reset requested" << std::endl;
-    // This will be handled by the main simulator
+void SimulatorUI::render2DPath(const std::vector<cv::Point2f>& path) {
+    // Render 2D path
+    for (size_t i = 1; i < path.size(); ++i) {
+        cv::line(current_frame_, path[i-1], path[i], path_color_, 2);
+    }
 }
 
-// Add method to get the display buffer for external use
-cv::Mat SimulatorUI::getDisplayBuffer() const {
-    return display_buffer_.clone();
+void SimulatorUI::render2DGoal(const sim::World& world) {
+    // Get goal position and render it in 2D
+    cv::Point3f goal_pos = world.getGoalPosition();
+    cv::Point2f pos(goal_pos.x, goal_pos.y);
+    if (pos.x >= 0 && pos.x < 1200 && pos.y >= 0 && pos.y < 800) {
+        cv::circle(current_frame_, pos, GOAL_SIZE, goal_color_, -1);
+    }
 }
 
-// Add method to clear path trace
-void SimulatorUI::clearPathTrace() {
-    path_trace_.clear();
+cv::Point2f SimulatorUI::project3DTo2D(const cv::Point3f& point_3d) const {
+    // Simple perspective projection
+    float depth = point_3d.z - camera_3d_.position.z;
+    if (depth <= 0) return cv::Point2f(-1, -1); // Behind camera
+    
+    float scale = 1000.0f / (depth + 100.0f);
+    float screen_x = (point_3d.x - camera_3d_.position.x) * scale + 600;
+    float screen_y = (point_3d.y - camera_3d_.position.y) * scale + 400;
+    
+    return cv::Point2f(screen_x, screen_y);
+}
+
+cv::Point3f SimulatorUI::screenTo3D(const cv::Point2f& screen_point, float depth) const {
+    // Inverse perspective projection
+    float scale = 1000.0f / (depth + 100.0f);
+    float world_x = (screen_point.x - 600) / scale + camera_3d_.position.x;
+    float world_y = (screen_point.y - 400) / scale + camera_3d_.position.y;
+    float world_z = depth + camera_3d_.position.z;
+    
+    return cv::Point3f(world_x, world_y, world_z);
+}
+
+cv::Mat SimulatorUI::getViewMatrix() const {
+    // Simple view matrix calculation
+    cv::Mat view_matrix = cv::Mat::eye(4, 4, CV_32F);
+    
+    // This is a simplified view matrix - in a real implementation,
+    // you would calculate the proper rotation and translation
+    return view_matrix;
+}
+
+cv::Mat SimulatorUI::getProjectionMatrix() const {
+    // Simple projection matrix calculation
+    cv::Mat proj_matrix = cv::Mat::eye(4, 4, CV_32F);
+    
+    // This is a simplified projection matrix - in a real implementation,
+    // you would calculate the proper perspective projection
+    return proj_matrix;
 }
 
 } // namespace ui

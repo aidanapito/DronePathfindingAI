@@ -5,14 +5,15 @@ namespace bridge {
 
 Environment::Environment(const EnvironmentConfig& config) 
     : config_(config), current_step_(0), episode_count_(0), cumulative_reward_(0.0f),
-      use_pathfinding_(true), pathfinding_algorithm_("astar"), current_waypoint_index_(0) {
+      use_pathfinding_(true), pathfinding_algorithm_("astar"), current_waypoint_index_(0), depth_(400) {
     // Initialize member variables
     current_step_ = 0;
     episode_count_ = 0;
     cumulative_reward_ = 0.0f;
-    path_trace_.clear();
-    episode_start_ = cv::Point2f(0, 0);
-    episode_goal_ = cv::Point2f(0, 0);
+    path_trace_3d_.clear();
+    path_trace_2d_.clear();
+    episode_start_ = cv::Point3f(0, 0, 0);
+    episode_goal_ = cv::Point3f(0, 0, 0);
     use_pathfinding_ = false;
     pathfinding_algorithm_ = "astar";
     current_waypoint_index_ = 0;
@@ -22,7 +23,8 @@ Environment::Environment(const EnvironmentConfig& config)
 void Environment::reset() {
     current_step_ = 0;
     cumulative_reward_ = 0.0f;
-    path_trace_.clear();
+    path_trace_3d_.clear();
+    path_trace_2d_.clear();
     
     // Reset action statistics
     action_stats_ = ActionStats{};
@@ -32,7 +34,7 @@ void Environment::reset() {
     
     if (world_ && drone_) {
         // Reset drone to start position
-        cv::Point2f start_pos = world_->getStartPosition();
+        cv::Point3f start_pos = world_->getStartPosition();
         float start_heading = 0.0f;
         
         sim::DroneState start_state;
@@ -53,13 +55,17 @@ void Environment::reset() {
         
         // Compute optimal path if pathfinding is enabled
         if (use_pathfinding_) {
-            computeOptimalPath();
+            if (is3DPathfindingEnabled()) {
+                computeOptimalPath3D();
+            } else {
+                computeOptimalPath();
+            }
             current_waypoint_index_ = 0; // Reset waypoint progress
         }
         
         // Clear path trace and add starting position
-        path_trace_.clear();
-        path_trace_.push_back(start_pos);
+        path_trace_3d_.clear();
+        path_trace_3d_.push_back(start_pos);
         
         std::cout << "Environment reset: Drone at (" << start_pos.x << ", " << start_pos.y 
                   << "), Goal at (" << episode_goal_.x << ", " << episode_goal_.y << ")" << std::endl;
@@ -80,7 +86,7 @@ EpisodeResult Environment::runEpisode(std::shared_ptr<agent::Agent> agent) {
                     drone_->hasReachedGoal(world_->getGoalPosition());
     result.final_distance = drone_ && world_ ? 
                            drone_->getDistanceToGoal(world_->getGoalPosition()) : 0.0f;
-    result.path_trace = path_trace_;
+    result.path_trace = path_trace_3d_;
     
     episode_history_.push_back(result);
     episode_count_++; // Increment episode counter
@@ -121,6 +127,11 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     // Track action statistics
     action_stats_.total_actions++;
     
+    // Update 3D action statistics if in 3D mode
+    if (is3DMode()) {
+        update3DActionStats(action);
+    }
+    
     switch (action) {
         case agent::Action::THROTTLE_FORWARD:
             throttle = 1.0f * config_.throttle_scale;  // Apply throttle scaling
@@ -146,7 +157,7 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     }
     
     // Safety check: Check if action would cause collision (if enabled)
-    if (config_.enable_safety_checks && drone_->wouldCollide(throttle, yaw_rate, config_.time_step)) {
+    if (config_.enable_safety_checks && drone_->wouldCollide(throttle, yaw_rate, 0.0f, 0.0f, 0.0f, config_.time_step)) {
         // Emergency stop - override action with safe values
         throttle = 0.0f;
         yaw_rate = 0.0f;
@@ -155,7 +166,7 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     }
     
     // Constraint check: Ensure action is within drone limits (if enabled)
-    if (config_.enable_safety_checks && !drone_->isWithinConstraints(throttle, yaw_rate)) {
+    if (config_.enable_safety_checks && !drone_->isWithinConstraints(throttle, yaw_rate, 0.0f, 0.0f, 0.0f)) {
         // Scale down action to fit within constraints
         float scale_factor = 0.5f;
         throttle *= scale_factor;
@@ -191,15 +202,16 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
     }
     
     // Check for collisions and boundary violations
-    cv::Point2f current_pos = drone_->getState().position;
-    if (world_->checkCollision(current_pos, 10.0f)) {
+    cv::Point3f current_pos_3d = drone_->getState().position;
+    cv::Point2f current_pos_2d(current_pos_3d.x, current_pos_3d.y); // Convert to 2D for backward compatibility
+    if (world_->checkCollision(current_pos_2d, 10.0f)) {
         std::cout << "WARNING: Collision detected at position (" 
-                  << current_pos.x << ", " << current_pos.y << ")" << std::endl;
+                  << current_pos_2d.x << ", " << current_pos_2d.y << ")" << std::endl;
     }
     
-    if (!world_->isInBounds(current_pos)) {
+    if (!world_->isInBounds(current_pos_2d)) {
         std::cout << "WARNING: Drone out of bounds at position (" 
-                  << current_pos.x << ", " << current_pos.y << ")" << std::endl;
+                  << current_pos_2d.x << ", " << current_pos_2d.y << ")" << std::endl;
     }
     
     // Calculate reward
@@ -218,7 +230,16 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
         
         // Pass optimal path to QLearningAgent if it's a QLearningAgent
         if (auto q_agent = std::dynamic_pointer_cast<agent::QLearningAgent>(agent)) {
-            q_agent->setOptimalPath(optimal_path_);
+            if (is3DPathfindingEnabled()) {
+                // Convert 3D path to 2D for backward compatibility
+                std::vector<cv::Point2f> path_2d;
+                for (const auto& point_3d : optimal_path_3d_) {
+                    path_2d.push_back(cv::Point2f(point_3d.x, point_3d.y));
+                }
+                q_agent->setOptimalPath(path_2d);
+            } else {
+                q_agent->setOptimalPath(optimal_path_2d_);
+            }
         }
     }
     
@@ -271,7 +292,9 @@ agent::Observation Environment::getCurrentObservation() const {
         obs.position = drone_->getState().position;
         
         // Calculate goal direction
-        cv::Point2f goal_dir = world_->getGoalPosition() - drone_->getState().position;
+        cv::Point3f goal_pos_3d = world_->getGoalPosition();
+        cv::Point2f goal_pos_2d(goal_pos_3d.x, goal_pos_3d.y); // Convert to 2D for backward compatibility
+        cv::Point2f goal_dir = goal_pos_2d - cv::Point2f(obs.position.x, obs.position.y);
         obs.goal_direction = atan2(goal_dir.y, goal_dir.x);
     }
     
@@ -284,6 +307,10 @@ void Environment::setAgent(std::shared_ptr<agent::Agent> agent) {
 
 void Environment::setWorld(std::shared_ptr<sim::World> world) {
     world_ = world;
+    if (world_) {
+        auto size = world_->getSize();
+        depth_ = size.depth;
+    }
 }
 
 void Environment::setDrone(std::shared_ptr<sim::Drone> drone) {
@@ -312,6 +339,22 @@ float Environment::getSuccessRate() const {
     return static_cast<float>(successes) / episode_history_.size();
 }
 
+float Environment::getAverageAltitudeError() const {
+    if (episode_history_.empty()) return 0.0f;
+    
+    float total_error = 0.0f;
+    int valid_episodes = 0;
+    
+    for (const auto& episode : episode_history_) {
+        if (episode.altitude_error > 0) {
+            total_error += episode.altitude_error;
+            valid_episodes++;
+        }
+    }
+    
+    return valid_episodes > 0 ? total_error / valid_episodes : 0.0f;
+}
+
 float Environment::calculateReward() const {
     if (!world_ || !drone_) return 0.0f;
     
@@ -332,10 +375,17 @@ float Environment::calculateReward() const {
     // Safety margin penalty
     reward += getSafetyMarginPenalty();
     
+    // 3D specific rewards
+    if (is3DMode()) {
+        reward += getAltitudeReward();
+        reward += getVerticalProgressReward();
+        reward += getClearanceReward();
+    }
+    
     // Enhanced goal-seeking rewards
     if (drone_) {
-        cv::Point2f current_pos = drone_->getState().position;
-        cv::Point2f goal_pos = world_->getGoalPosition();
+        cv::Point3f current_pos = drone_->getState().position;
+        cv::Point3f goal_pos = world_->getGoalPosition();
         float current_distance = cv::norm(current_pos - goal_pos);
         float start_distance = cv::norm(episode_start_ - goal_pos);
         
@@ -348,23 +398,24 @@ float Environment::calculateReward() const {
         }
         
         // 2. DIRECTIONAL REWARD: Reward for moving toward goal
-        if (path_trace_.size() >= 2) {
-            cv::Point2f current_pos = path_trace_.back();
-            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+        if (path_trace_3d_.size() >= 2) {
+            cv::Point3f current_pos = path_trace_3d_.back();
+            cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
+            cv::Point3f goal_pos = world_->getGoalPosition();
             
             // Calculate movement vector
-            cv::Point2f movement = current_pos - prev_pos;
+            cv::Point3f movement = current_pos - prev_pos;
             float movement_magnitude = cv::norm(movement);
             
             if (movement_magnitude > 0.1f) { // Only if actually moving
                 // Calculate goal direction
-                cv::Point2f goal_direction = goal_pos - prev_pos;
+                cv::Point3f goal_direction = goal_pos - prev_pos;
                 float goal_distance = cv::norm(goal_direction);
                 
                 if (goal_distance > 0.1f) {
                     // Normalize vectors
                     goal_direction = goal_direction * (1.0f / goal_distance);
-                    cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
+                    cv::Point3f normalized_movement = movement * (1.0f / movement_magnitude);
                     
                     // Dot product: 1.0 = moving directly toward goal, -1.0 = moving away
                     float alignment = goal_direction.dot(normalized_movement);
@@ -382,8 +433,15 @@ float Environment::calculateReward() const {
         }
         
         // 3. PATH FOLLOWING REWARD (when pathfinding is enabled)
-        if (use_pathfinding_ && !optimal_path_.empty()) {
-            float path_distance = getDistanceToPath();
+        if (use_pathfinding_) {
+            float path_distance;
+            if (is3DPathfindingEnabled() && !optimal_path_3d_.empty()) {
+                path_distance = getDistanceToPath3D();
+            } else if (!optimal_path_2d_.empty()) {
+                path_distance = getDistanceToPath();
+            } else {
+                path_distance = 0.0f;
+            }
             
             // Exponential penalty for deviating from path (more penalty for larger deviations)
             if (path_distance > 0) {
@@ -392,34 +450,45 @@ float Environment::calculateReward() const {
             }
             
             // Enhanced waypoint rewards
-            if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
-                // Bonus for reaching waypoints (scaled by progress)
-                float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
-                reward += waypoint_progress * 10.0f; // More reward for later waypoints
-                
-                // Additional bonus for being close to next waypoint
-                cv::Point2f next_waypoint = getNextWaypoint();
-                float distance_to_waypoint = cv::norm(current_pos - next_waypoint);
-                if (distance_to_waypoint < 30.0f) {
-                    reward += (30.0f - distance_to_waypoint) * 0.1f; // Closer = more reward
+            if (current_waypoint_index_ > 0) {
+                int path_size = is3DPathfindingEnabled() ? optimal_path_3d_.size() : optimal_path_2d_.size();
+                if (current_waypoint_index_ < path_size) {
+                    // Bonus for reaching waypoints (scaled by progress)
+                    float waypoint_progress = static_cast<float>(current_waypoint_index_) / path_size;
+                    reward += waypoint_progress * 10.0f; // More reward for later waypoints
+                    
+                    // Additional bonus for being close to next waypoint
+                    cv::Point2f next_waypoint;
+                    if (is3DPathfindingEnabled()) {
+                        cv::Point3f next_3d = getNextWaypoint3D();
+                        next_waypoint = cv::Point2f(next_3d.x, next_3d.y);
+                    } else {
+                        next_waypoint = getNextWaypoint();
+                    }
+                    
+                    cv::Point2f current_pos_2d(current_pos.x, current_pos.y); // Convert to 2D for backward compatibility
+                    float distance_to_waypoint = cv::norm(current_pos_2d - next_waypoint);
+                    if (distance_to_waypoint < 30.0f) {
+                        reward += (30.0f - distance_to_waypoint) * 0.1f; // Closer = more reward
+                    }
                 }
             }
         }
         
         // 4. EFFICIENCY REWARDS: Encourage smart movement patterns
-        if (path_trace_.size() > 5) {
+        if (path_trace_3d_.size() > 5) {
             // Reward for covering new ground (not retracing steps)
-            cv::Point2f recent_center(0, 0);
-            int lookback = std::min(5, static_cast<int>(path_trace_.size()));
+            cv::Point3f recent_center(0, 0, 0);
+            int lookback = std::min(5, static_cast<int>(path_trace_3d_.size()));
             
-            for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
-                recent_center += path_trace_[i];
+            for (int i = path_trace_3d_.size() - lookback; i < path_trace_3d_.size(); ++i) {
+                recent_center += path_trace_3d_[i];
             }
             recent_center = recent_center * (1.0f / lookback);
             
             float area_covered = 0.0f;
-            for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
-                area_covered += cv::norm(path_trace_[i] - recent_center);
+            for (int i = path_trace_3d_.size() - lookback; i < path_trace_3d_.size(); ++i) {
+                area_covered += cv::norm(path_trace_3d_[i] - recent_center);
             }
             
             // If exploring new area, give reward; if oscillating, small penalty
@@ -438,9 +507,9 @@ float Environment::calculateReward() const {
         }
         
         // 6. SPEED EFFICIENCY: Reward for moving at good speed toward goal
-        if (path_trace_.size() >= 2) {
-            cv::Point2f current_pos = path_trace_.back();
-            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+        if (path_trace_3d_.size() >= 2) {
+            cv::Point3f current_pos = path_trace_3d_.back();
+            cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
             float step_distance = cv::norm(current_pos - prev_pos);
             
             // Reward for making meaningful progress (not just tiny movements)
@@ -458,10 +527,10 @@ float Environment::calculateReward() const {
         }
         
         // 8. ACTION-SPECIFIC REWARDS: Encourage efficient movement patterns
-        if (path_trace_.size() >= 2) {
-            cv::Point2f current_pos = path_trace_.back();
-            cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
-            cv::Point2f goal_pos = world_->getGoalPosition();
+        if (path_trace_3d_.size() >= 2) {
+            cv::Point3f current_pos = path_trace_3d_.back();
+            cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
+            cv::Point3f goal_pos = world_->getGoalPosition();
             
             // Calculate if the last action moved us toward the goal
             float prev_distance = cv::norm(prev_pos - goal_pos);
@@ -481,13 +550,13 @@ float Environment::calculateReward() const {
                 case agent::Action::YAW_LEFT:
                 case agent::Action::YAW_RIGHT:
                     // Reward turning if it aligns us better with goal direction
-                    if (path_trace_.size() >= 3) {
-                        cv::Point2f two_back = path_trace_[path_trace_.size() - 3];
-                        cv::Point2f old_direction = prev_pos - two_back;
-                        cv::Point2f new_direction = current_pos - prev_pos;
+                    if (path_trace_3d_.size() >= 3) {
+                        cv::Point3f two_back = path_trace_3d_[path_trace_3d_.size() - 3];
+                        cv::Point3f old_direction = prev_pos - two_back;
+                        cv::Point3f new_direction = current_pos - prev_pos;
                         
                         if (cv::norm(old_direction) > 0.1f && cv::norm(new_direction) > 0.1f) {
-                            cv::Point2f goal_direction = goal_pos - prev_pos;
+                            cv::Point3f goal_direction = goal_pos - prev_pos;
                             float old_alignment = old_direction.dot(goal_direction) / (cv::norm(old_direction) * cv::norm(goal_direction));
                             float new_alignment = new_direction.dot(goal_direction) / (cv::norm(new_direction) * cv::norm(goal_direction));
                             
@@ -517,7 +586,7 @@ bool Environment::checkEpisodeTermination() const {
 
 void Environment::updatePathTrace() {
     if (drone_) {
-        path_trace_.push_back(drone_->getState().position);
+        path_trace_3d_.push_back(drone_->getState().position);
     }
 }
 
@@ -544,7 +613,9 @@ agent::Observation Environment::createObservation() const {
         obs.position = drone_->getState().position;
         
         // Calculate goal direction
-        cv::Point2f goal_dir = world_->getGoalPosition() - drone_->getState().position;
+        cv::Point3f goal_pos_3d = world_->getGoalPosition();
+        cv::Point2f goal_pos_2d(goal_pos_3d.x, goal_pos_3d.y); // Convert to 2D for backward compatibility
+        cv::Point2f goal_dir = goal_pos_2d - cv::Point2f(obs.position.x, obs.position.y);
         obs.goal_direction = atan2(goal_dir.y, goal_dir.x);
     }
     
@@ -554,8 +625,8 @@ agent::Observation Environment::createObservation() const {
 float Environment::getGoalReward() const {
     if (!drone_ || !world_) return 0.0f;
     
-    cv::Point2f current_pos = drone_->getState().position;
-    cv::Point2f goal_pos = world_->getGoalPosition();
+    cv::Point3f current_pos = drone_->getState().position;
+    cv::Point3f goal_pos = world_->getGoalPosition();
     float current_distance = cv::norm(current_pos - goal_pos);
     
     // Strong goal reward when very close
@@ -578,10 +649,10 @@ float Environment::getCollisionPenalty() const {
 }
 
 float Environment::getProgressReward() const {
-    if (!drone_ || !world_ || path_trace_.size() < 2) return 0.0f;
+    if (!drone_ || !world_ || path_trace_3d_.size() < 2) return 0.0f;
     
-    cv::Point2f current_pos = drone_->getState().position;
-    cv::Point2f goal_pos = world_->getGoalPosition();
+    cv::Point3f current_pos = drone_->getState().position;
+    cv::Point3f goal_pos = world_->getGoalPosition();
     float current_distance = cv::norm(current_pos - goal_pos);
     
     // Calculate progress from start
@@ -598,65 +669,6 @@ float Environment::getProgressReward() const {
     }
 }
 
-float Environment::getDirectionalReward() const {
-    if (!drone_ || !world_ || path_trace_.size() < 2) return 0.0f;
-    
-    cv::Point2f current_pos = path_trace_.back();
-    cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
-    cv::Point2f goal_pos = world_->getGoalPosition();
-    
-    cv::Point2f movement = current_pos - prev_pos;
-    float movement_magnitude = cv::norm(movement);
-    
-    if (movement_magnitude > 0.1f) {
-        cv::Point2f goal_direction = goal_pos - prev_pos;
-        float goal_distance = cv::norm(goal_direction);
-        
-        if (goal_distance > 0.1f) {
-            goal_direction = goal_direction * (1.0f / goal_distance);
-            cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
-            float alignment = goal_direction.dot(normalized_movement);
-            
-            // Enhanced directional rewards
-            if (alignment > 0.9f) {
-                return 5.0f;  // Excellent alignment
-            } else if (alignment > 0.7f) {
-                return 3.0f;  // Good alignment
-            } else if (alignment > 0.3f) {
-                return 1.0f;  // Moderate alignment
-            } else if (alignment < -0.5f) {
-                return -2.0f; // Moving away from goal
-            }
-        }
-    }
-    
-    return 0.0f;
-}
-
-float Environment::getPathFollowingReward() const {
-    if (!use_pathfinding_ || optimal_path_.empty()) return 0.0f;
-    
-    float path_distance = getDistanceToPath();
-    float reward = 0.0f;
-    
-    // Reward for staying close to optimal path
-    if (path_distance < 20.0f) {
-        reward += 2.0f; // Close to path
-    } else if (path_distance < 50.0f) {
-        reward += 1.0f; // Moderately close to path
-    } else {
-        reward -= std::min(path_distance * 0.1f, 10.0f); // Penalty for straying
-    }
-    
-    // Additional reward for waypoint progress
-    if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
-        float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
-        reward += waypoint_progress * 20.0f; // Significant reward for waypoint progress
-    }
-    
-    return reward;
-}
-
 float Environment::getTimePenalty() const {
     return config_.time_penalty;
 }
@@ -666,65 +678,184 @@ float Environment::getSafetyMarginPenalty() const {
     return 0.0f;
 }
 
+float Environment::getAltitudeReward() const {
+    if (!drone_ || !world_) return 0.0f;
+    
+    cv::Point3f current_pos = drone_->getState().position;
+    cv::Point3f goal_pos = world_->getGoalPosition();
+    
+    // Reward for maintaining good altitude relative to goal
+    float altitude_diff = std::abs(current_pos.z - goal_pos.z);
+    if (altitude_diff < 20.0f) {
+        return config_.altitude_reward; // Reward for being at similar altitude
+    } else if (altitude_diff > 100.0f) {
+        return config_.altitude_penalty; // Penalty for large altitude difference
+    }
+    
+    return 0.0f;
+}
+
+float Environment::getVerticalProgressReward() const {
+    if (!drone_ || !world_ || path_trace_3d_.size() < 2) return 0.0f;
+    
+    cv::Point3f current_pos = drone_->getState().position;
+    cv::Point3f goal_pos = world_->getGoalPosition();
+    cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
+    
+    // Calculate vertical progress toward goal
+    float prev_altitude_diff = std::abs(prev_pos.z - goal_pos.z);
+    float current_altitude_diff = std::abs(current_pos.z - goal_pos.z);
+    float vertical_progress = prev_altitude_diff - current_altitude_diff;
+    
+    if (vertical_progress > 0) {
+        return vertical_progress * 0.5f; // Reward for moving toward goal altitude
+    }
+    
+    return 0.0f;
+}
+
+float Environment::getClearanceReward() const {
+    if (!drone_ || !world_) return 0.0f;
+    
+    cv::Point3f current_pos = drone_->getState().position;
+    float clearance_reward = 0.0f;
+    
+    // Reward for maintaining safe distance from ground and ceiling
+    float ground_distance = current_pos.z - 0.0f;
+    float ceiling_distance = depth_ - current_pos.z;
+    
+    if (ground_distance < 20.0f) {
+        clearance_reward -= (20.0f - ground_distance) * 0.1f; // Penalty for being too close to ground
+    }
+    
+    if (ceiling_distance < 20.0f) {
+        clearance_reward -= (20.0f - ceiling_distance) * 0.1f; // Penalty for being too close to ceiling
+    }
+    
+    // Reward for being in the middle altitude range
+    float optimal_altitude = depth_ / 2.0f;
+    float altitude_deviation = std::abs(current_pos.z - optimal_altitude);
+    if (altitude_deviation < 50.0f) {
+        clearance_reward += 0.5f; // Small reward for being in safe altitude range
+    }
+    
+    return clearance_reward;
+}
+
 // Pathfinding integration methods
 std::vector<cv::Point2f> Environment::getOptimalPath() const {
-    return optimal_path_;
+    return optimal_path_2d_;
+}
+
+std::vector<cv::Point3f> Environment::getOptimalPath3D() const {
+    return optimal_path_3d_;
 }
 
 void Environment::computeOptimalPath() {
     if (!world_ || !drone_) return;
     
-    optimal_path_.clear();
+    optimal_path_2d_.clear();
     current_waypoint_index_ = 0;
     
-    cv::Point2f start = drone_->getState().position;
-    cv::Point2f goal = world_->getGoalPosition();
+    cv::Point3f start_3d = drone_->getState().position;
+    cv::Point2f start(start_3d.x, start_3d.y); // Convert 3D to 2D for backward compatibility
+    cv::Point3f goal_3d = world_->getGoalPosition();
+    cv::Point2f goal(goal_3d.x, goal_3d.y); // Convert 3D to 2D for backward compatibility
     
     if (pathfinding_algorithm_ == "astar") {
-        optimal_path_ = world_->findPathAStar(start, goal, 10.0f);
+        optimal_path_2d_ = world_->findPathAStar(start, goal, 10.0f);
     } else if (pathfinding_algorithm_ == "floodfill") {
-        optimal_path_ = world_->findPathFloodFill(start, goal, 10.0f);
+        optimal_path_2d_ = world_->findPathFloodFill(start, goal, 10.0f);
     }
     
     // If no path found, create a direct line to goal
-    if (optimal_path_.empty()) {
-        optimal_path_.push_back(start);
-        optimal_path_.push_back(goal);
+    if (optimal_path_2d_.empty()) {
+        optimal_path_2d_.push_back(start);
+        optimal_path_2d_.push_back(goal);
     }
     
-    std::cout << "Computed optimal path with " << optimal_path_.size() << " waypoints" << std::endl;
+    std::cout << "Computed optimal path with " << optimal_path_2d_.size() << " waypoints" << std::endl;
+}
+
+void Environment::computeOptimalPath3D() {
+    if (!world_ || !drone_) return;
+    
+    optimal_path_3d_.clear();
+    current_waypoint_index_ = 0;
+    
+    cv::Point3f start_3d = drone_->getState().position;
+    cv::Point3f goal_3d = world_->getGoalPosition();
+    
+    if (pathfinding_algorithm_ == "astar") {
+        optimal_path_3d_ = world_->findPathAStar3D(start_3d, goal_3d, 10.0f);
+    } else if (pathfinding_algorithm_ == "floodfill") {
+        optimal_path_3d_ = world_->findPathFloodFill3D(start_3d, goal_3d, 10.0f);
+    }
+    
+    // If no path found, create a direct line to goal
+    if (optimal_path_3d_.empty()) {
+        optimal_path_3d_.push_back(start_3d);
+        optimal_path_3d_.push_back(goal_3d);
+    }
+    
+    std::cout << "Computed 3D optimal path with " << optimal_path_3d_.size() << " waypoints" << std::endl;
 }
 
 float Environment::getDistanceToPath() const {
-    if (optimal_path_.empty() || !drone_) return 0.0f;
+    if (optimal_path_2d_.empty() || !drone_) return 0.0f;
     
-    cv::Point2f current_pos = drone_->getState().position;
+    cv::Point3f current_pos_3d = drone_->getState().position;
+    cv::Point2f current_pos_2d(current_pos_3d.x, current_pos_3d.y); // Convert to 2D for backward compatibility
     float min_distance = std::numeric_limits<float>::max();
     
     // Find minimum distance to any point on the path
-    for (const auto& waypoint : optimal_path_) {
-        float distance = cv::norm(current_pos - waypoint);
+    for (const auto& waypoint : optimal_path_2d_) {
+        float distance = cv::norm(current_pos_2d - waypoint);
         min_distance = std::min(min_distance, distance);
     }
     
     return min_distance;
 }
 
-cv::Point2f Environment::getNextWaypoint() const {
-    if (optimal_path_.empty() || current_waypoint_index_ >= optimal_path_.size()) {
-        return world_ ? world_->getGoalPosition() : cv::Point2f(0, 0);
+float Environment::getDistanceToPath3D() const {
+    if (optimal_path_3d_.empty() || !drone_) return 0.0f;
+    
+    cv::Point3f current_pos_3d = drone_->getState().position;
+    float min_distance = std::numeric_limits<float>::max();
+    
+    // Find minimum distance to any point on the 3D path
+    for (const auto& waypoint : optimal_path_3d_) {
+        float distance = cv::norm(current_pos_3d - waypoint);
+        min_distance = std::min(min_distance, distance);
     }
-    return optimal_path_[current_waypoint_index_];
+    
+    return min_distance;
+}
+
+cv::Point3f Environment::getNextWaypoint3D() const {
+    if (optimal_path_3d_.empty() || current_waypoint_index_ >= optimal_path_3d_.size()) {
+        return world_ ? world_->getGoalPosition() : cv::Point3f(0, 0, 0);
+    }
+    return optimal_path_3d_[current_waypoint_index_];
+}
+
+cv::Point2f Environment::getNextWaypoint() const {
+    if (optimal_path_2d_.empty() || current_waypoint_index_ >= optimal_path_2d_.size()) {
+        cv::Point3f goal_3d = world_ ? world_->getGoalPosition() : cv::Point3f(0, 0, 0);
+        return cv::Point2f(goal_3d.x, goal_3d.y); // Convert 3D to 2D for backward compatibility
+    }
+    return optimal_path_2d_[current_waypoint_index_];
 }
 
 bool Environment::hasReachedWaypoint() const {
-    if (optimal_path_.empty() || current_waypoint_index_ >= optimal_path_.size()) {
+    if (optimal_path_2d_.empty() || current_waypoint_index_ >= optimal_path_2d_.size()) {
         return false;
     }
     
-    cv::Point2f current_pos = drone_->getState().position;
-    cv::Point2f waypoint = optimal_path_[current_waypoint_index_];
-    float distance = cv::norm(current_pos - waypoint);
+    cv::Point3f current_pos_3d = drone_->getState().position;
+    cv::Point2f current_pos_2d(current_pos_3d.x, current_pos_3d.y); // Convert to 2D for backward compatibility
+    cv::Point2f waypoint = optimal_path_2d_[current_waypoint_index_];
+    float distance = cv::norm(current_pos_2d - waypoint);
     
     return distance < 20.0f; // 20 pixel threshold
 }
@@ -733,8 +864,43 @@ void Environment::updateWaypointProgress() {
     if (hasReachedWaypoint()) {
         current_waypoint_index_++;
         std::cout << "Reached waypoint " << current_waypoint_index_ - 1 
-                  << " of " << optimal_path_.size() << std::endl;
+                  << " of " << optimal_path_2d_.size() << std::endl;
     }
+}
+
+void Environment::update3DActionStats(agent::Action action) {
+    switch (action) {
+        case agent::Action::PITCH_UP:
+            action_stats_.pitch_up_actions++;
+            break;
+        case agent::Action::PITCH_DOWN:
+            action_stats_.pitch_down_actions++;
+            break;
+        case agent::Action::ROLL_LEFT:
+            action_stats_.roll_left_actions++;
+            break;
+        case agent::Action::ROLL_RIGHT:
+            action_stats_.roll_right_actions++;
+            break;
+        case agent::Action::THRUST_UP:
+            action_stats_.thrust_up_actions++;
+            break;
+        case agent::Action::THRUST_DOWN:
+            action_stats_.thrust_down_actions++;
+            break;
+        default:
+            break;
+    }
+    
+    // Check if this is a combined 3D action
+    if (action != agent::Action::IDLE && action != agent::Action::THROTTLE_FORWARD &&
+        action != agent::Action::YAW_LEFT && action != agent::Action::YAW_RIGHT) {
+        action_stats_.combined_3d_actions++;
+    }
+}
+
+float Environment::calculate3DDistance(const cv::Point3f& p1, const cv::Point3f& p2) const {
+    return cv::norm(p1 - p2);
 }
 
 void Environment::printActionStats() const {
@@ -753,6 +919,19 @@ void Environment::printActionStats() const {
     std::cout << "Scaled Actions: " << action_stats_.scaled_actions 
               << " (" << (action_stats_.total_actions > 0 ? (100.0f * action_stats_.scaled_actions / action_stats_.total_actions) : 0.0f) << "%)" << std::endl;
     std::cout << "Emergency Stops: " << action_stats_.emergency_stops << std::endl;
+    
+    // 3D Action Statistics
+    if (is3DMode()) {
+        std::cout << "\n--- 3D Action Statistics ---" << std::endl;
+        std::cout << "Pitch Up Actions: " << action_stats_.pitch_up_actions << std::endl;
+        std::cout << "Pitch Down Actions: " << action_stats_.pitch_down_actions << std::endl;
+        std::cout << "Roll Left Actions: " << action_stats_.roll_left_actions << std::endl;
+        std::cout << "Roll Right Actions: " << action_stats_.roll_right_actions << std::endl;
+        std::cout << "Thrust Up Actions: " << action_stats_.thrust_up_actions << std::endl;
+        std::cout << "Thrust Down Actions: " << action_stats_.thrust_down_actions << std::endl;
+        std::cout << "Combined 3D Actions: " << action_stats_.combined_3d_actions << std::endl;
+    }
+    
     std::cout << "=====================================" << std::endl;
 }
 
@@ -769,25 +948,25 @@ Environment::RewardBreakdown Environment::getRewardBreakdown() const {
     breakdown.safety_penalty = getSafetyMarginPenalty();
     
     // Calculate enhanced rewards (simplified version for breakdown)
-    cv::Point2f current_pos = drone_->getState().position;
-    cv::Point2f goal_pos = world_->getGoalPosition();
+    cv::Point3f current_pos = drone_->getState().position;
+    cv::Point3f goal_pos = world_->getGoalPosition();
     float current_distance = cv::norm(current_pos - goal_pos);
     float start_distance = cv::norm(episode_start_ - goal_pos);
     
     // Directional reward
-    if (path_trace_.size() >= 2) {
-        cv::Point2f current_pos = path_trace_.back();
-        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
-        cv::Point2f movement = current_pos - prev_pos;
+    if (path_trace_3d_.size() >= 2) {
+        cv::Point3f current_pos = path_trace_3d_.back();
+        cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
+        cv::Point3f movement = current_pos - prev_pos;
         float movement_magnitude = cv::norm(movement);
         
         if (movement_magnitude > 0.1f) {
-            cv::Point2f goal_direction = goal_pos - prev_pos;
+            cv::Point3f goal_direction = goal_pos - prev_pos;
             float goal_distance = cv::norm(goal_direction);
             
             if (goal_distance > 0.1f) {
                 goal_direction = goal_direction * (1.0f / goal_distance);
-                cv::Point2f normalized_movement = movement * (1.0f / movement_magnitude);
+                cv::Point3f normalized_movement = movement * (1.0f / movement_magnitude);
                 float alignment = goal_direction.dot(normalized_movement);
                 
                 if (alignment > 0.7f) {
@@ -802,31 +981,42 @@ Environment::RewardBreakdown Environment::getRewardBreakdown() const {
     }
     
     // Path following reward
-    if (use_pathfinding_ && !optimal_path_.empty()) {
-        float path_distance = getDistanceToPath();
+    if (use_pathfinding_) {
+        float path_distance;
+        if (is3DPathfindingEnabled() && !optimal_path_3d_.empty()) {
+            path_distance = getDistanceToPath3D();
+        } else if (!optimal_path_2d_.empty()) {
+            path_distance = getDistanceToPath();
+        } else {
+            path_distance = 0.0f;
+        }
+        
         if (path_distance > 0) {
             breakdown.path_following_reward = -std::min(path_distance * 0.05f, 5.0f);
         }
         
-        if (current_waypoint_index_ > 0 && current_waypoint_index_ < optimal_path_.size()) {
-            float waypoint_progress = static_cast<float>(current_waypoint_index_) / optimal_path_.size();
-            breakdown.path_following_reward += waypoint_progress * 10.0f;
+        if (current_waypoint_index_ > 0) {
+            int path_size = is3DPathfindingEnabled() ? optimal_path_3d_.size() : optimal_path_2d_.size();
+            if (current_waypoint_index_ < path_size) {
+                float waypoint_progress = static_cast<float>(current_waypoint_index_) / path_size;
+                breakdown.path_following_reward += waypoint_progress * 10.0f;
+            }
         }
     }
     
     // Efficiency reward
-    if (path_trace_.size() > 5) {
-        cv::Point2f recent_center(0, 0);
-        int lookback = std::min(5, static_cast<int>(path_trace_.size()));
+    if (path_trace_3d_.size() > 5) {
+        cv::Point3f recent_center(0, 0, 0);
+        int lookback = std::min(5, static_cast<int>(path_trace_3d_.size()));
         
-        for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
-            recent_center += path_trace_[i];
+        for (int i = path_trace_3d_.size() - lookback; i < path_trace_3d_.size(); ++i) {
+            recent_center += path_trace_3d_[i];
         }
         recent_center = recent_center * (1.0f / lookback);
         
         float area_covered = 0.0f;
-        for (int i = path_trace_.size() - lookback; i < path_trace_.size(); ++i) {
-            area_covered += cv::norm(path_trace_[i] - recent_center);
+        for (int i = path_trace_3d_.size() - lookback; i < path_trace_3d_.size(); ++i) {
+            area_covered += cv::norm(path_trace_3d_[i] - recent_center);
         }
         
         if (area_covered > 100.0f) {
@@ -844,9 +1034,9 @@ Environment::RewardBreakdown Environment::getRewardBreakdown() const {
     }
     
     // Speed reward
-    if (path_trace_.size() >= 2) {
-        cv::Point2f current_pos = path_trace_.back();
-        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
+    if (path_trace_3d_.size() >= 2) {
+        cv::Point3f current_pos = path_trace_3d_.back();
+        cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
         float step_distance = cv::norm(current_pos - prev_pos);
         
         if (step_distance > 5.0f) {
@@ -863,10 +1053,10 @@ Environment::RewardBreakdown Environment::getRewardBreakdown() const {
     }
     
     // Action reward (simplified)
-    if (path_trace_.size() >= 2) {
-        cv::Point2f current_pos = path_trace_.back();
-        cv::Point2f prev_pos = path_trace_[path_trace_.size() - 2];
-        cv::Point2f goal_pos = world_->getGoalPosition();
+    if (path_trace_3d_.size() >= 2) {
+        cv::Point3f current_pos = path_trace_3d_.back();
+        cv::Point3f prev_pos = path_trace_3d_[path_trace_3d_.size() - 2];
+        cv::Point3f goal_pos = world_->getGoalPosition();
         
         float prev_distance = cv::norm(prev_pos - goal_pos);
         float current_distance = cv::norm(current_pos - goal_pos);
@@ -885,13 +1075,23 @@ Environment::RewardBreakdown Environment::getRewardBreakdown() const {
         }
     }
     
+    // 3D specific rewards
+    if (is3DMode()) {
+        breakdown.altitude_reward = getAltitudeReward();
+        breakdown.altitude_penalty = 0.0f; // This is already included in altitude_reward
+        breakdown.vertical_progress_reward = getVerticalProgressReward();
+        breakdown.clearance_reward = getClearanceReward();
+    }
+    
     // Calculate total
     breakdown.total_reward = breakdown.goal_reward + breakdown.collision_penalty + 
                              breakdown.progress_reward + breakdown.time_penalty + 
                              breakdown.safety_penalty + breakdown.directional_reward + 
                              breakdown.path_following_reward + breakdown.efficiency_reward + 
                              breakdown.boundary_reward + breakdown.speed_reward + 
-                             breakdown.proximity_reward + breakdown.action_reward;
+                             breakdown.proximity_reward + breakdown.action_reward +
+                             breakdown.altitude_reward + breakdown.vertical_progress_reward + 
+                             breakdown.clearance_reward;
     
     return breakdown;
 }
