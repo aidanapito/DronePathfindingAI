@@ -297,7 +297,7 @@ void World::generateSkyscraper() {
             
             Obstacle obs;
             obs.position = cv::Point3f(x, y, ground_level_);
-            obs.radius = 25.0f;
+            obs.radius = 8.0f; // Much smaller radius for realistic buildings
             obs.height = height;
             obs.is_moving = false;
             obs.velocity = cv::Point3f(0.0f, 0.0f, 0.0f);
@@ -840,7 +840,7 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
         float depth = camera_pos.z - obs.position.z; // Changed: camera.z - obstacle.z
         if (depth <= 0) continue; // Behind camera
         
-        float scale = 1000.0f / (depth + 100.0f); // Perspective scaling
+        float scale = 500.0f / (depth + 100.0f); // Reduced perspective scaling for better visibility
         float screen_x = (obs.position.x - camera_pos.x) * scale + width_ / 2;
         float screen_y = (obs.position.y - camera_pos.y) * scale + height_ / 2;
         float screen_radius = obs.radius * scale;
@@ -851,26 +851,38 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
             // Color based on height
             cv::Scalar color;
             if (obs.is_vertical) {
-                color = cv::Scalar(100, 100, 100); // Gray for buildings
+                color = cv::Scalar(80, 80, 80); // Darker gray for buildings
             } else {
                 color = cv::Scalar(0, 0, 0); // Black for other obstacles
             }
             
-            cv::circle(output, screen_pos, screen_radius, color, -1);
-            
-            // Draw height indicator for vertical obstacles
+            // Draw buildings as outlined rectangles instead of solid circles
             if (obs.is_vertical) {
                 float height_screen = obs.height * scale;
-                cv::line(output, screen_pos, 
-                        cv::Point2f(screen_x, screen_y - height_screen), 
-                        cv::Scalar(50, 50, 50), 2);
+                cv::Point2f top_left(screen_x - screen_radius, screen_y - height_screen);
+                cv::Point2f bottom_right(screen_x + screen_radius, screen_y);
+                
+                // Draw building outline
+                cv::rectangle(output, top_left, bottom_right, color, 2);
+                
+                // Draw some windows (simple dots)
+                for (int w = 0; w < 3; ++w) {
+                    for (int h = 0; h < 5; ++h) {
+                        float window_x = screen_x - screen_radius/2 + w * screen_radius/2;
+                        float window_y = screen_y - height_screen/2 + h * height_screen/5;
+                        cv::circle(output, cv::Point2f(window_x, window_y), 1, cv::Scalar(255, 255, 200), -1);
+                    }
+                }
+            } else {
+                // Draw other obstacles as small circles
+                cv::circle(output, screen_pos, screen_radius, color, 1);
             }
         }
     }
     
     // Draw start and goal positions
-    float start_scale = 1000.0f / (camera_pos.z - start_position_.z + 100.0f); // Changed: camera.z - start.z
-    float goal_scale = 1000.0f / (camera_pos.z - goal_position_.z + 100.0f); // Changed: camera.z - goal.z
+    float start_scale = 500.0f / (camera_pos.z - start_position_.z + 100.0f); // Reduced scaling to match obstacles
+    float goal_scale = 500.0f / (camera_pos.z - goal_position_.z + 100.0f); // Reduced scaling to match obstacles
     
     cv::Point2f start_screen((start_position_.x - camera_pos.x) * start_scale + width_ / 2,
                              (start_position_.y - camera_pos.y) * start_scale + height_ / 2);

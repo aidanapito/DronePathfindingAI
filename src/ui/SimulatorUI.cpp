@@ -70,14 +70,9 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     // Get drone position to position camera properly
     cv::Point3f drone_pos = drone.getState().position;
     
-    // Position camera above and behind the drone for a good view
-    cv::Point3f camera_pos = drone_pos + cv::Point3f(-100, -100, 200); // Behind, to the left, and above
-    cv::Point3f camera_target = drone_pos + cv::Point3f(100, 0, 0); // Looking forward from drone
-    
-    std::cout << "SimulatorUI render3D: Drone pos=(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ")" << std::endl;
-    std::cout << "SimulatorUI render3D: Camera pos=(" << camera_pos.x << ", " << camera_pos.y << ", " << camera_pos.z << ")" << std::endl;
-    std::cout << "SimulatorUI render3D: Camera target=(" << camera_target.x << ", " << camera_target.y << ", " << camera_target.z << ")" << std::endl;
-    std::cout << "SimulatorUI render3D: Current frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
+    // Position camera at a better third-person view - higher up and further back
+    cv::Point3f camera_pos = drone_pos + cv::Point3f(-150, -150, 300); // Further back, higher up
+    cv::Point3f camera_target = drone_pos + cv::Point3f(150, 0, 0); // Looking further ahead
     
     // Create a temporary frame for the world rendering
     cv::Mat world_frame;
@@ -95,13 +90,7 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     // Resize the world frame to match our current_frame dimensions
     cv::resize(world_frame, current_frame_, current_frame_.size());
     
-    std::cout << "SimulatorUI render3D: After resize, current frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
-    
-    // Check some pixel values after resize
-    if (current_frame_.rows > 0 && current_frame_.cols > 0) {
-        cv::Vec3b resized_center = current_frame_.at<cv::Vec3b>(current_frame_.rows/2, current_frame_.cols/2);
-        std::cout << "SimulatorUI render3D: Resized center pixel: B=" << (int)resized_center[0] << " G=" << (int)resized_center[1] << " R=" << (int)resized_center[2] << std::endl;
-    }
+
     
     // Now overlay additional UI elements on top
     if (show_grid_) {
@@ -126,8 +115,6 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     if (show_goal_) {
         render3DGoal(world);
     }
-    
-    std::cout << "SimulatorUI render3D: Final frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
 }
 
 void SimulatorUI::orbitCamera(float delta_azimuth, float delta_elevation) {
