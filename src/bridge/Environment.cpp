@@ -175,8 +175,12 @@ void Environment::step(std::shared_ptr<agent::Agent> agent) {
         std::cout << "Safety: Action scaled down to fit constraints" << std::endl;
     }
     
-    // Update drone physics
-    drone_->update(config_.time_step, throttle, yaw_rate);
+    // Update drone physics with full 3D controls
+    float pitch_rate = 0.0f;  // No pitch change for now
+    float roll_rate = 0.0f;   // No roll change for now
+    float vertical_thrust = 0.0f; // No vertical movement for now
+    
+    drone_->update(config_.time_step, throttle, yaw_rate, pitch_rate, roll_rate, vertical_thrust);
     
     // Check for emergency stop after action
     if (drone_->isEmergencyStop()) {

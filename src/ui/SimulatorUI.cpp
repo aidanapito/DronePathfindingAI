@@ -70,9 +70,9 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     // Get drone position to position camera properly
     cv::Point3f drone_pos = drone.getState().position;
     
-    // Position camera at a better third-person view - higher up and further back
-    cv::Point3f camera_pos = drone_pos + cv::Point3f(-150, -150, 300); // Further back, higher up
-    cv::Point3f camera_target = drone_pos + cv::Point3f(150, 0, 0); // Looking further ahead
+    // Position camera ON the drone for first-person view
+    cv::Point3f camera_pos = drone_pos; // Camera is the drone
+    cv::Point3f camera_target = drone_pos + cv::Point3f(cos(drone.getState().heading), sin(drone.getState().heading), 0); // Looking in drone's direction
     
     // Create a temporary frame for the world rendering
     cv::Mat world_frame;
@@ -115,6 +115,9 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     if (show_goal_) {
         render3DGoal(world);
     }
+    
+    // Render speed indicator for first-person view
+    renderSpeedIndicator(drone);
 }
 
 void SimulatorUI::orbitCamera(float delta_azimuth, float delta_elevation) {
@@ -293,6 +296,36 @@ void SimulatorUI::render3DGoal(const sim::World& world) {
     if (screen_pos.x >= 0 && screen_pos.x < 1200 && screen_pos.y >= 0 && screen_pos.y < 800) {
         cv::circle(current_frame_, screen_pos, GOAL_SIZE, goal_color_, -1);
     }
+}
+
+void SimulatorUI::renderSpeedIndicator(const sim::Drone& drone) {
+    // Render a speed indicator in the bottom-right corner
+    float velocity = drone.getState().velocity;
+    float speed_mph = velocity * 2.237f; // Convert to mph for dramatic effect
+    
+    std::string speed_text = "SPEED: " + std::to_string((int)speed_mph) + " MPH";
+    cv::putText(current_frame_, speed_text, cv::Point(1000, 750), 
+                cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255), 2);
+    
+    // Add a visual speed bar
+    int bar_width = 150;
+    int bar_height = 20;
+    int bar_x = 1000;
+    int bar_y = 770;
+    
+    // Background bar
+    cv::rectangle(current_frame_, cv::Point(bar_x, bar_y), 
+                  cv::Point(bar_x + bar_width, bar_y + bar_height), 
+                  cv::Scalar(100, 100, 100), -1);
+    
+    // Speed bar (green when moving, red when stopped)
+    float speed_ratio = std::min(1.0f, velocity / 100.0f); // Normalize to max speed
+    int filled_width = (int)(bar_width * speed_ratio);
+    
+    cv::Scalar bar_color = (velocity > 5.0f) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
+    cv::rectangle(current_frame_, cv::Point(bar_x, bar_y), 
+                  cv::Point(bar_x + filled_width, bar_y + bar_height), 
+                  bar_color, -1);
 }
 
 void SimulatorUI::render2DGrid() {

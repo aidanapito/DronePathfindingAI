@@ -840,7 +840,7 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
         float depth = camera_pos.z - obs.position.z; // Changed: camera.z - obstacle.z
         if (depth <= 0) continue; // Behind camera
         
-        float scale = 500.0f / (depth + 100.0f); // Reduced perspective scaling for better visibility
+        float scale = 2000.0f / (depth + 50.0f); // Dramatic perspective scaling for first-person drone view
         float screen_x = (obs.position.x - camera_pos.x) * scale + width_ / 2;
         float screen_y = (obs.position.y - camera_pos.y) * scale + height_ / 2;
         float screen_radius = obs.radius * scale;
@@ -881,8 +881,8 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
     }
     
     // Draw start and goal positions
-    float start_scale = 500.0f / (camera_pos.z - start_position_.z + 100.0f); // Reduced scaling to match obstacles
-    float goal_scale = 500.0f / (camera_pos.z - goal_position_.z + 100.0f); // Reduced scaling to match obstacles
+    float start_scale = 2000.0f / (camera_pos.z - start_position_.z + 50.0f); // Dramatic scaling to match obstacles
+    float goal_scale = 2000.0f / (camera_pos.z - goal_position_.z + 50.0f); // Dramatic scaling to match obstacles
     
     cv::Point2f start_screen((start_position_.x - camera_pos.x) * start_scale + width_ / 2,
                              (start_position_.y - camera_pos.y) * start_scale + height_ / 2);
