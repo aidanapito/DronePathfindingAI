@@ -67,38 +67,67 @@ void SimulatorUI::render2D(const sim::World& world, const sim::Drone& drone,
 void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone, 
                            const std::vector<cv::Point3f>& path_3d,
                            const std::vector<cv::Point2f>& path_2d) {
-    // Clear the current frame
-    current_frame_ = cv::Mat::zeros(800, 1200, CV_8UC3);
+    // Get drone position to position camera properly
+    cv::Point3f drone_pos = drone.getState().position;
     
-    // Render 3D grid
+    // Position camera above and behind the drone for a good view
+    cv::Point3f camera_pos = drone_pos + cv::Point3f(-100, -100, 200); // Behind, to the left, and above
+    cv::Point3f camera_target = drone_pos + cv::Point3f(100, 0, 0); // Looking forward from drone
+    
+    std::cout << "SimulatorUI render3D: Drone pos=(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ")" << std::endl;
+    std::cout << "SimulatorUI render3D: Camera pos=(" << camera_pos.x << ", " << camera_pos.y << ", " << camera_pos.z << ")" << std::endl;
+    std::cout << "SimulatorUI render3D: Camera target=(" << camera_target.x << ", " << camera_target.y << ", " << camera_target.z << ")" << std::endl;
+    std::cout << "SimulatorUI render3D: Current frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
+    
+    // Create a temporary frame for the world rendering
+    cv::Mat world_frame;
+    world.render3D(world_frame, camera_pos, camera_target);
+    
+    std::cout << "SimulatorUI render3D: World frame size: " << world_frame.cols << "x" << world_frame.rows << std::endl;
+    std::cout << "SimulatorUI render3D: World frame type: " << world_frame.type() << std::endl;
+    
+    // Check some pixel values from world frame
+    if (world_frame.rows > 0 && world_frame.cols > 0) {
+        cv::Vec3b world_center = world_frame.at<cv::Vec3b>(world_frame.rows/2, world_frame.cols/2);
+        std::cout << "SimulatorUI render3D: World center pixel: B=" << (int)world_center[0] << " G=" << (int)world_center[1] << " R=" << (int)world_center[2] << std::endl;
+    }
+    
+    // Resize the world frame to match our current_frame dimensions
+    cv::resize(world_frame, current_frame_, current_frame_.size());
+    
+    std::cout << "SimulatorUI render3D: After resize, current frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
+    
+    // Check some pixel values after resize
+    if (current_frame_.rows > 0 && current_frame_.cols > 0) {
+        cv::Vec3b resized_center = current_frame_.at<cv::Vec3b>(current_frame_.rows/2, current_frame_.cols/2);
+        std::cout << "SimulatorUI render3D: Resized center pixel: B=" << (int)resized_center[0] << " G=" << (int)resized_center[1] << " R=" << (int)resized_center[2] << std::endl;
+    }
+    
+    // Now overlay additional UI elements on top
     if (show_grid_) {
         render3DGrid();
     }
     
-    // Render 3D axes
     if (show_axes_) {
         render3DAxes();
     }
     
-    // Render 3D obstacles
-    if (show_obstacles_) {
-        render3DObstacles(world);
-    }
-    
-    // Render 3D drone
+    // Render 3D drone on top of the world
     if (show_drone_) {
         render3DDrone(drone);
     }
     
-    // Render 3D path
+    // Render 3D path on top
     if (show_path_ && (!path_3d.empty() || !path_2d.empty())) {
         render3DPath(path_3d, path_2d);
     }
     
-    // Render 3D goal
+    // Render 3D goal on top
     if (show_goal_) {
         render3DGoal(world);
     }
+    
+    std::cout << "SimulatorUI render3D: Final frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
 }
 
 void SimulatorUI::orbitCamera(float delta_azimuth, float delta_elevation) {
@@ -160,9 +189,13 @@ void SimulatorUI::resetCamera() {
 
 void SimulatorUI::createWindow(const std::string& name, int width, int height) {
     window_name_ = name;
+    // Create frame with correct dimensions (width x height)
     current_frame_ = cv::Mat::zeros(height, width, CV_8UC3);
     cv::namedWindow(window_name_, cv::WINDOW_AUTOSIZE);
     window_created_ = true;
+    
+    std::cout << "Created window '" << name << "' with size " << width << "x" << height << std::endl;
+    std::cout << "Frame size: " << current_frame_.cols << "x" << current_frame_.rows << std::endl;
 }
 
 void SimulatorUI::updateWindow() {
@@ -198,12 +231,14 @@ void SimulatorUI::saveFrame(const std::string& filename) const {
 // Private helper methods
 
 void SimulatorUI::render3DGrid() {
-    // Render a simple 3D grid
+    // Render a simple 3D grid with thinner, more transparent lines
+    cv::Scalar grid_color_thin(50, 50, 50); // Darker, more subtle grid
+    
     for (int x = 0; x < 1200; x += 50) {
-        cv::line(current_frame_, cv::Point(x, 0), cv::Point(x, 800), grid_color_, 1);
+        cv::line(current_frame_, cv::Point(x, 0), cv::Point(x, 800), grid_color_thin, 1);
     }
     for (int y = 0; y < 800; y += 50) {
-        cv::line(current_frame_, cv::Point(0, y), cv::Point(1200, y), grid_color_, 1);
+        cv::line(current_frame_, cv::Point(0, y), cv::Point(1200, y), grid_color_thin, 1);
     }
 }
 

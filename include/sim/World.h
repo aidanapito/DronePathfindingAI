@@ -64,7 +64,7 @@ public:
     void update(float dt);
     void render(cv::Mat& output);
     void render3D(cv::Mat& output, const cv::Point3f& camera_pos, 
-                  const cv::Point3f& camera_target);
+                  const cv::Point3f& camera_target) const;
     
     // Collision detection
     bool checkCollision(const cv::Point3f& position, float radius) const;

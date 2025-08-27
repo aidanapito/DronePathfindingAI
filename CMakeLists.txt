@@ -132,6 +132,21 @@ add_executable(debug_reset_sequence src/debug_reset_sequence.cpp)
 # Create 3D demo executable
 add_executable(3d_demo src/3d_demo.cpp)
 
+# Create debug 3D render executable
+add_executable(debug_3d_render debug_3d_render.cpp)
+
+# Create detailed debug 3D render executable
+add_executable(debug_3d_detailed debug_3d_detailed.cpp)
+
+# Create interactive 3D viewer executable
+add_executable(interactive_3d_viewer interactive_3d_viewer.cpp)
+
+# Create world render test executable
+add_executable(test_world_render test_world_render.cpp)
+
+# Create simulator UI debug executable
+add_executable(debug_simulator_ui debug_simulator_ui.cpp)
+
 # Link libraries for library target
 target_link_libraries(${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
@@ -217,6 +232,41 @@ target_link_libraries(debug_reset_sequence
 
 # Link libraries for 3D demo executable
 target_link_libraries(3d_demo
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for debug 3D render executable
+target_link_libraries(debug_3d_render
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for detailed debug 3D render executable
+target_link_libraries(debug_3d_detailed
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for interactive 3D viewer executable
+target_link_libraries(interactive_3d_viewer
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for world render test executable
+target_link_libraries(test_world_render
+    ${PROJECT_NAME}_lib
+    ${OpenCV_LIBS}
+    ${EIGEN3_LIBS}
+)
+
+# Link libraries for simulator UI debug executable
+target_link_libraries(debug_simulator_ui
     ${PROJECT_NAME}_lib
     ${OpenCV_LIBS}
     ${EIGEN3_LIBS}

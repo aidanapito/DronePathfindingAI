@@ -830,14 +830,14 @@ void World::update3DOccupancyGrid() {
     }
 }
 
-void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::Point3f& camera_target) {
+void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::Point3f& camera_target) const {
     // Create a 3D visualization
     output = cv::Mat(height_, width_, CV_8UC3, cv::Scalar(200, 200, 255)); // Sky blue background
     
     // Simple 3D projection: project 3D obstacles to 2D screen
     for (const auto& obs : obstacles_) {
-        // Calculate depth-based scaling
-        float depth = obs.position.z - camera_pos.z;
+        // Calculate depth-based scaling - ensure camera is looking in the right direction
+        float depth = camera_pos.z - obs.position.z; // Changed: camera.z - obstacle.z
         if (depth <= 0) continue; // Behind camera
         
         float scale = 1000.0f / (depth + 100.0f); // Perspective scaling
@@ -869,8 +869,8 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
     }
     
     // Draw start and goal positions
-    float start_scale = 1000.0f / (start_position_.z - camera_pos.z + 100.0f);
-    float goal_scale = 1000.0f / (goal_position_.z - camera_pos.z + 100.0f);
+    float start_scale = 1000.0f / (camera_pos.z - start_position_.z + 100.0f); // Changed: camera.z - start.z
+    float goal_scale = 1000.0f / (camera_pos.z - goal_position_.z + 100.0f); // Changed: camera.z - goal.z
     
     cv::Point2f start_screen((start_position_.x - camera_pos.x) * start_scale + width_ / 2,
                              (start_position_.y - camera_pos.y) * start_scale + height_ / 2);
