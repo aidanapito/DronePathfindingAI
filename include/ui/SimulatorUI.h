@@ -75,6 +75,7 @@ private:
     void render3DPath(const std::vector<cv::Point3f>& path_3d, 
                       const std::vector<cv::Point2f>& path_2d);
     void render3DGoal(const sim::World& world);
+    void renderSpeedIndicator(const sim::Drone& drone);
     
     // 3D math helpers
     cv::Point2f project3DTo2D(const cv::Point3f& point_3d) const;
