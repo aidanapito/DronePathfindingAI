@@ -62,8 +62,8 @@ void InputHandler::update() {
 }
 
 void InputHandler::updateInputSmoothing(float delta_time) {
-    // Smoothly interpolate current input toward target input
-    float smoothing_factor = std::min(MAX_INPUT_RATE * delta_time, 1.0f);
+    // Smoothly interpolate current input toward target input - much faster response
+    float smoothing_factor = std::min(MAX_INPUT_RATE * delta_time, 0.8f); // Cap at 80% per frame for responsiveness
     
     current_input_.throttle = current_input_.throttle + 
                              (target_input_.throttle - current_input_.throttle) * smoothing_factor;

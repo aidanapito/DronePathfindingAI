@@ -31,8 +31,8 @@ public:
     void clearPauseToggle() { pause_toggle_requested_ = false; }
     
     // Input sensitivity
-    static constexpr float INPUT_SENSITIVITY = 0.1f;     // How responsive controls are
-    static constexpr float MAX_INPUT_RATE = 2.0f;        // Max input change per second
+    static constexpr float INPUT_SENSITIVITY = 1.0f;     // How responsive controls are
+    static constexpr float MAX_INPUT_RATE = 20.0f;       // Max input change per second (much faster response)
 
 private:
     DroneInput drone_input_;

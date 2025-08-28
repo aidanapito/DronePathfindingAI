@@ -1,8 +1,9 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
-#include "Drone.h"
+#include <map>
 #include "World.h"
+#include "Drone.h"
 #include "Camera.h"
 #include "InputHandler.h"
 
@@ -39,6 +40,9 @@ int main() {
     // Game loop variables
     auto last_time = std::chrono::high_resolution_clock::now();
     bool paused = false;
+    
+    // Input tracking
+    std::map<int, bool> key_pressed;
     
     std::cout << "🎮 Controls:" << std::endl;
     std::cout << "   WASD - Move drone" << std::endl;
@@ -140,7 +144,31 @@ int main() {
         // Handle key input
         int key = cv::waitKey(1) & 0xFF;
         if (key != 255) {
-            input.processKey(key, true);
+            if (!key_pressed[key]) {
+                // Key was just pressed
+                input.processKey(key, true);
+                key_pressed[key] = true;
+                std::cout << "🔑 Key pressed: " << (char)key << std::endl;
+            }
+        } else {
+            // No key pressed, check for released keys
+            for (auto& [k, pressed] : key_pressed) {
+                if (pressed) {
+                    input.processKey(k, false);
+                    pressed = false;
+                    std::cout << "🔑 Key released: " << (char)k << std::endl;
+                }
+            }
+        }
+        
+        // Debug: Print current input values
+        const DroneInput& current_input = input.getDroneInput();
+        if (current_input.throttle != 0 || current_input.yaw_rate != 0 || 
+            current_input.pitch_rate != 0 || current_input.roll_rate != 0) {
+            std::cout << "🎮 Input: T=" << current_input.throttle 
+                      << " Y=" << current_input.yaw_rate 
+                      << " P=" << current_input.pitch_rate 
+                      << " R=" << current_input.roll_rate << std::endl;
         }
         
         // Check for window close
