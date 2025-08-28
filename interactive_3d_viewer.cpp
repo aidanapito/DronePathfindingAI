@@ -41,6 +41,13 @@ int main() {
     config.time_penalty = -1.0f;
     config.safety_margin_penalty = -10.0f;
     
+    // Very slow movement settings for better 3D viewing
+    config.throttle_scale = 0.02f;          // 2% throttle = 2 units/step (much slower)
+    config.yaw_rate_scale = 0.05f;          // 5% yaw rate = 0.05 rad/step (slower turning)
+    config.pitch_rate_scale = 0.05f;        // 3D pitch rate scaling (slower)
+    config.roll_rate_scale = 0.05f;         // 3D roll rate scaling (slower)
+    config.vertical_thrust_scale = 0.05f;   // 3D vertical thrust scaling (slower)
+    
     // Create environment
     auto env = std::make_shared<bridge::Environment>(config);
     env->setWorld(world);

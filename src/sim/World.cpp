@@ -77,7 +77,7 @@ void World::addRandomObstacles(int count, float min_radius, float max_radius,
     std::uniform_real_distribution<float> radius_dist(min_radius, max_radius);
     std::uniform_real_distribution<float> x_dist(100.0f, width_ - 100.0f);
     std::uniform_real_distribution<float> y_dist(100.0f, height_ - 100.0f);
-    std::uniform_real_distribution<float> z_dist(ground_level_, max_building_height_);
+    std::uniform_real_distribution<float> z_dist(ground_level_ + 50.0f, max_building_height_ + 50.0f); // Raise obstacles above ground
     std::uniform_real_distribution<float> height_dist(min_height, max_height);
     
     for (int i = 0; i < count; ++i) {
@@ -99,7 +99,7 @@ void World::addMovingObstacles(int count, float min_radius, float max_radius,
     std::uniform_real_distribution<float> radius_dist(min_radius, max_radius);
     std::uniform_real_distribution<float> x_dist(100.0f, width_ - 100.0f);
     std::uniform_real_distribution<float> y_dist(100.0f, height_ - 100.0f);
-    std::uniform_real_distribution<float> z_dist(ground_level_, max_building_height_);
+    std::uniform_real_distribution<float> z_dist(ground_level_ + 50.0f, max_building_height_ + 50.0f); // Raise obstacles above ground
     std::uniform_real_distribution<float> height_dist(min_height, max_height);
     std::uniform_real_distribution<float> angle_dist(0.0f, 2.0f * M_PI);
     
@@ -129,7 +129,7 @@ void World::addVerticalObstacles(int count, float min_radius, float max_radius,
     
     for (int i = 0; i < count; ++i) {
         Obstacle obs;
-        obs.position = cv::Point3f(x_dist(rng_), y_dist(rng_), ground_level_);
+        obs.position = cv::Point3f(x_dist(rng_), y_dist(rng_), ground_level_ + 50.0f); // Raise obstacles above ground
         obs.radius = radius_dist(rng_);
         obs.height = height_dist(rng_);
         obs.is_moving = false;
@@ -296,7 +296,7 @@ void World::generateSkyscraper() {
             float height = 50.0f + (rng_() % 100) * 0.5f; // Random building height
             
             Obstacle obs;
-            obs.position = cv::Point3f(x, y, ground_level_);
+            obs.position = cv::Point3f(x, y, ground_level_ + 50.0f); // Raise buildings 50 units above ground
             obs.radius = 8.0f; // Much smaller radius for realistic buildings
             obs.height = height;
             obs.is_moving = false;
@@ -321,7 +321,7 @@ void World::generateUnderwater() {
         float height = 20.0f + (rng_() % 60);
         
         Obstacle obs;
-        obs.position = cv::Point3f(x, y, ground_level_);
+        obs.position = cv::Point3f(x, y, ground_level_ + 50.0f); // Raise obstacles above ground
         obs.radius = 15.0f + (rng_() % 25);
         obs.height = height;
         obs.is_moving = false;
@@ -362,7 +362,7 @@ void World::generateMountainPass() {
             float x = 300.0f + j * 50.0f;
             
             Obstacle obs;
-            obs.position = cv::Point3f(x, y, ground_level_);
+            obs.position = cv::Point3f(x, y, ground_level_ + 50.0f); // Raise mountains above ground
             obs.radius = 8.0f;
             obs.height = 30.0f;
             obs.is_moving = false;
@@ -834,19 +834,27 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
     // Create a 3D visualization
     output = cv::Mat(height_, width_, CV_8UC3, cv::Scalar(200, 200, 255)); // Sky blue background
     
+
+    
     // Simple 3D projection: project 3D obstacles to 2D screen
     for (const auto& obs : obstacles_) {
         // Calculate depth-based scaling - ensure camera is looking in the right direction
         float depth = camera_pos.z - obs.position.z; // Changed: camera.z - obstacle.z
         if (depth <= 0) continue; // Behind camera
         
-        float scale = 2000.0f / (depth + 50.0f); // Dramatic perspective scaling for first-person drone view
+        float scale = 800.0f / (depth + 100.0f); // Balanced perspective scaling for first-person drone view
         float screen_x = (obs.position.x - camera_pos.x) * scale + width_ / 2;
         float screen_y = (obs.position.y - camera_pos.y) * scale + height_ / 2;
         float screen_radius = obs.radius * scale;
         
+        // Debug: Print obstacle position and screen coordinates
+        std::cout << "World::render3D: Obstacle at (" << obs.position.x << ", " << obs.position.y << ", " << obs.position.z 
+                  << ") -> screen (" << screen_x << ", " << screen_y << ") depth=" << depth << " scale=" << scale << std::endl;
+        
         if (screen_x >= 0 && screen_x < width_ && screen_y >= 0 && screen_y < height_) {
             cv::Point2f screen_pos(screen_x, screen_y);
+            
+
             
             // Color based on height
             cv::Scalar color;
@@ -881,8 +889,8 @@ void World::render3D(cv::Mat& output, const cv::Point3f& camera_pos, const cv::P
     }
     
     // Draw start and goal positions
-    float start_scale = 2000.0f / (camera_pos.z - start_position_.z + 50.0f); // Dramatic scaling to match obstacles
-    float goal_scale = 2000.0f / (camera_pos.z - goal_position_.z + 50.0f); // Dramatic scaling to match obstacles
+    float start_scale = 800.0f / (camera_pos.z - start_position_.z + 100.0f); // Balanced scaling to match obstacles
+    float goal_scale = 800.0f / (camera_pos.z - goal_position_.z + 100.0f); // Balanced scaling to match obstacles
     
     cv::Point2f start_screen((start_position_.x - camera_pos.x) * start_scale + width_ / 2,
                              (start_position_.y - camera_pos.y) * start_scale + height_ / 2);

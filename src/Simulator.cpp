@@ -38,12 +38,12 @@ void Simulator::initializeComponents() {
     env_config.time_penalty = -0.05f;          // Balanced time penalty
     env_config.safety_margin_penalty = -0.02f;
     
-    // Conservative movement settings (from our bug fix)
-    env_config.throttle_scale = 0.1f;          // 10% throttle = 10 units/step
-    env_config.yaw_rate_scale = 0.1f;          // 10% yaw rate = 0.1 rad/step
-    env_config.pitch_rate_scale = 0.1f;        // 3D pitch rate scaling
-    env_config.roll_rate_scale = 0.1f;         // 3D roll rate scaling
-    env_config.vertical_thrust_scale = 0.1f;   // 3D vertical thrust scaling
+    // Very slow movement settings for better 3D viewing
+    env_config.throttle_scale = 0.02f;          // 2% throttle = 2 units/step (much slower)
+    env_config.yaw_rate_scale = 0.05f;          // 5% yaw rate = 0.05 rad/step (slower turning)
+    env_config.pitch_rate_scale = 0.05f;        // 3D pitch rate scaling (slower)
+    env_config.roll_rate_scale = 0.05f;         // 3D roll rate scaling (slower)
+    env_config.vertical_thrust_scale = 0.05f;   // 3D vertical thrust scaling (slower)
     env_config.enable_safety_checks = true;
     env_config.enable_action_logging = true;
     env_config.action_log_frequency = 10;

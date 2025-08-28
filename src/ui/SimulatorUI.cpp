@@ -70,8 +70,8 @@ void SimulatorUI::render3D(const sim::World& world, const sim::Drone& drone,
     // Get drone position to position camera properly
     cv::Point3f drone_pos = drone.getState().position;
     
-    // Position camera ON the drone for first-person view
-    cv::Point3f camera_pos = drone_pos; // Camera is the drone
+    // Position camera ON the drone but lower for first-person view
+    cv::Point3f camera_pos = drone_pos + cv::Point3f(0, 0, -150); // Camera on drone but 150 units lower (closer to ground)
     cv::Point3f camera_target = drone_pos + cv::Point3f(cos(drone.getState().heading), sin(drone.getState().heading), 0); // Looking in drone's direction
     
     // Create a temporary frame for the world rendering
