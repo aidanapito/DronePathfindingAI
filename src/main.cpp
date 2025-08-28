@@ -11,7 +11,7 @@
 void onMouse(int event, int x, int y, int flags, void* userdata) {
     if (userdata) {
         InputHandler* input = static_cast<InputHandler*>(userdata);
-        input->processMouse(event, x, y, flags);
+        input->processMouse(x, y, flags);
     }
 }
 
@@ -53,7 +53,8 @@ int main() {
     std::cout << "   Mouse drag - Orbit camera (3rd person)" << std::endl;
     std::cout << "   Mouse wheel - Zoom (3rd person)" << std::endl;
     
-    while (!input.shouldExit()) {
+    // Main game loop
+    while (!input.isExitRequested()) {
         auto current_time = std::chrono::high_resolution_clock::now();
         float delta_time = std::chrono::duration<float>(current_time - last_time).count();
         last_time = current_time;
@@ -62,36 +63,30 @@ int main() {
         delta_time = std::min(delta_time, 0.1f);
         
         // Handle input
-        input.update();
-        
         // Handle camera toggle
-        if (input.shouldToggleCamera()) {
+        if (input.isCameraModeChanged()) {
             if (camera.getMode() == CameraMode::FIRST_PERSON) {
                 camera.setThirdPersonMode(drone.getPosition(), drone.getOrientation());
-                std::cout << "📷 Switched to Third-Person Camera" << std::endl;
             } else {
                 camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
-                std::cout << "📷 Switched to First-Person Camera" << std::endl;
             }
-            input.clearCameraToggle();
         }
         
-        // Handle pause toggle
-        if (input.shouldPause()) {
+        // Handle pause
+        if (input.isPauseRequested()) {
             paused = !paused;
-            std::cout << (paused ? "⏸️  Paused" : "▶️  Resumed") << std::endl;
-            input.clearPauseToggle();
+        }
+        
+        // Check for exit
+        if (input.isExitRequested()) {
+            break;
         }
         
         if (!paused) {
-            // Update drone physics
-            const DroneInput& drone_input = input.getDroneInput();
-            drone.update(delta_time, 
-                        drone_input.throttle, 
-                        drone_input.yaw_rate,
-                        drone_input.pitch_rate,
-                        drone_input.roll_rate,
-                        drone_input.vertical_thrust);
+            // Update drone with input
+            const DroneInput& drone_input = input.getCurrentInput();
+            drone.update(delta_time, drone_input.throttle, drone_input.yaw_rate, 
+                        drone_input.pitch_rate, drone_input.roll_rate, drone_input.vertical_thrust);
             
             // Update camera position
             if (camera.getMode() == CameraMode::FIRST_PERSON) {
@@ -144,32 +139,21 @@ int main() {
         // Handle key input
         int key = cv::waitKey(1) & 0xFF;
         if (key != 255) {
-            if (!key_pressed[key]) {
-                // Key was just pressed
-                input.processKey(key, true);
-                key_pressed[key] = true;
-                std::cout << "🔑 Key pressed: " << (char)key << std::endl;
-            }
-        } else {
-            // No key pressed, check for released keys
-            for (auto& [k, pressed] : key_pressed) {
-                if (pressed) {
-                    input.processKey(k, false);
-                    pressed = false;
-                    std::cout << "🔑 Key released: " << (char)k << std::endl;
-                }
-            }
+            input.processKey(key, true);
+            std::cout << "🔑 Key pressed: " << (char)key << std::endl;
         }
         
+        // Update input handler
+        input.update(delta_time);
+        
+        // Get current input values
+        const DroneInput& current_input = input.getCurrentInput();
+        
         // Debug: Print current input values
-        const DroneInput& current_input = input.getDroneInput();
-        if (current_input.throttle != 0 || current_input.yaw_rate != 0 || 
-            current_input.pitch_rate != 0 || current_input.roll_rate != 0) {
-            std::cout << "🎮 Input: T=" << current_input.throttle 
-                      << " Y=" << current_input.yaw_rate 
-                      << " P=" << current_input.pitch_rate 
-                      << " R=" << current_input.roll_rate << std::endl;
-        }
+        std::cout << "Input - T:" << current_input.throttle 
+                  << " Y:" << current_input.yaw_rate 
+                  << " P:" << current_input.pitch_rate 
+                  << " R:" << current_input.roll_rate << std::endl;
         
         // Check for window close
         if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1) {

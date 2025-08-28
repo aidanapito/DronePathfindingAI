@@ -17,39 +17,34 @@ public:
     
     // Input processing
     void processKey(int key, bool pressed);
-    void processMouse(int event, int x, int y, int flags);
-    void update();
+    void processMouse(int x, int y, int flags);
+    void update(float delta_time);
     
     // Getters
-    const DroneInput& getDroneInput() const { return drone_input_; }
-    bool shouldExit() const { return exit_requested_; }
-    bool shouldToggleCamera() const { return camera_toggle_requested_; }
-    bool shouldPause() const { return pause_toggle_requested_; }
+    const DroneInput& getCurrentInput() const;
+    bool isExitRequested() const;
+    bool isCameraModeChanged() const;
+    bool isPauseRequested() const;
     
-    // Reset flags
-    void clearCameraToggle() { camera_toggle_requested_ = false; }
-    void clearPauseToggle() { pause_toggle_requested_ = false; }
+    // Camera control
+    void orbit(int delta_x, int delta_y);
+    void zoom(float delta);
+    void resetView();
     
-    // Input sensitivity
-    static constexpr float INPUT_SENSITIVITY = 1.0f;     // How responsive controls are
-    static constexpr float MAX_INPUT_RATE = 20.0f;       // Max input change per second (much faster response)
+    // Camera getters
+    float getOrbitAngleX() const;
+    float getOrbitAngleY() const;
+    float getZoomDistance() const;
 
 private:
-    DroneInput drone_input_;
-    bool exit_requested_;
-    bool camera_toggle_requested_;
-    bool pause_toggle_requested_;
-    
-    // Mouse state for third-person camera
-    cv::Point2i last_mouse_pos_;
-    bool mouse_dragging_;
-    
-    // Input smoothing
-    DroneInput target_input_;
     DroneInput current_input_;
+    DroneInput target_input_;
+    bool exit_requested_;
+    bool camera_mode_changed_;
+    bool pause_requested_;
     
-    // Helper methods
-    void updateInputSmoothing(float delta_time);
-    void handleKeyPress(int key);
-    void handleKeyRelease(int key);
+    // Camera control
+    float orbit_angle_x_;
+    float orbit_angle_y_;
+    float zoom_distance_;
 };
