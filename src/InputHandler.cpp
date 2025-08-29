@@ -45,6 +45,12 @@ void InputHandler::processKey(int key, bool pressed) {
             case 'f': case 'F':
                 current_input_.pitch_rate = -1.0f; // Pitch down
                 break;
+            case 'z': case 'Z':
+                current_input_.vertical_thrust = 1.0f; // Fly up
+                break;
+            case 'x': case 'X':
+                current_input_.vertical_thrust = -1.0f; // Fly down
+                break;
             case ' ': // Spacebar
                 pause_requested_ = true;
                 break;
@@ -73,6 +79,10 @@ void InputHandler::processKey(int key, bool pressed) {
             case 'r': case 'R':
             case 'f': case 'F':
                 current_input_.pitch_rate = 0.0f;
+                break;
+            case 'z': case 'Z':
+            case 'x': case 'X':
+                current_input_.vertical_thrust = 0.0f;
                 break;
         }
     }

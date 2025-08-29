@@ -20,6 +20,9 @@ public:
     void zoom(float delta);                    // Mouse wheel
     void resetView();
     
+    // Helper methods
+    cv::Point3f rotateVector(const cv::Point3f& vec, const cv::Point3f& angles);
+    
     // Getters
     cv::Point3f getPosition() const { return position_; }
     cv::Point3f getTarget() const { return target_; }

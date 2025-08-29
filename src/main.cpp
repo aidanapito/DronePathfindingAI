@@ -44,13 +44,17 @@ int main() {
     // Input tracking
     std::map<int, bool> key_pressed;
     
-    std::cout << "🎮 Controls:" << std::endl;
-    std::cout << "   WASD - Move drone" << std::endl;
-    std::cout << "   Q/E - Rotate left/right" << std::endl;
-    std::cout << "   Space - Toggle pause" << std::endl;
-    std::cout << "   C - Toggle camera (1st/3rd person)" << std::endl;
+    std::cout << "=== 3D Drone Simulator ===" << std::endl;
+    std::cout << "Controls:" << std::endl;
+    std::cout << "   W/S - Forward/Backward" << std::endl;
+    std::cout << "   A/D - Roll left/right" << std::endl;
+    std::cout << "   Q/E - Turn left/right (yaw)" << std::endl;
+    std::cout << "   R/F - Pitch up/down" << std::endl;
+    std::cout << "   Z/X - Fly up/down (vertical)" << std::endl;
+    std::cout << "   C - Toggle camera mode" << std::endl;
+    std::cout << "   Space - Pause" << std::endl;
     std::cout << "   ESC - Exit" << std::endl;
-    std::cout << "   Mouse drag - Orbit camera (3rd person)" << std::endl;
+    std::cout << "   Mouse - Orbit camera (3rd person)" << std::endl;
     std::cout << "   Mouse wheel - Zoom (3rd person)" << std::endl;
     
     // Main game loop
@@ -103,7 +107,7 @@ int main() {
         std::cout << "Camera: pos(" << camera.getPosition().x << ", " << camera.getPosition().y << ", " << camera.getPosition().z 
                   << ") target(" << camera.getTarget().x << ", " << camera.getTarget().y << ", " << camera.getTarget().z << ")" << std::endl;
         std::cout << "Drone: pos(" << drone.getPosition().x << ", " << drone.getPosition().y << ", " << drone.getPosition().z 
-                  << ") heading: " << drone.getOrientation().z << std::endl;
+                  << ") roll:" << drone.getOrientation().x << " pitch:" << drone.getOrientation().y << " yaw:" << drone.getOrientation().z << std::endl;
         
         // Render world from camera perspective
         world.render3D(frame, camera.getPosition(), camera.getTarget());
@@ -166,7 +170,8 @@ int main() {
         std::cout << "Input - T:" << current_input.throttle 
                   << " Y:" << current_input.yaw_rate 
                   << " P:" << current_input.pitch_rate 
-                  << " R:" << current_input.roll_rate << std::endl;
+                  << " R:" << current_input.roll_rate 
+                  << " V:" << current_input.vertical_thrust << std::endl;
         
         // Check for window close
         if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1) {
