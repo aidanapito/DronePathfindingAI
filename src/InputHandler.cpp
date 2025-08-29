@@ -10,45 +10,71 @@ InputHandler::InputHandler() {
     exit_requested_ = false;
     camera_mode_changed_ = false;
     pause_requested_ = false;
+    
+    // Initialize camera control
+    orbit_angle_x_ = 0.0f;
+    orbit_angle_y_ = 0.0f;
+    zoom_distance_ = 200.0f;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
-    if (!pressed) return; // Only handle key presses for now
-    
-    switch (key) {
-        case 'w': case 'W':
-            current_input_.throttle = 1.0f; // Full forward
-            break;
-        case 's': case 'S':
-            current_input_.throttle = -1.0f; // Full backward
-            break;
-        case 'a': case 'A':
-            current_input_.roll_rate = -1.0f; // Roll left
-            break;
-        case 'd': case 'D':
-            current_input_.roll_rate = 1.0f; // Roll right
-            break;
-        case 'q': case 'Q':
-            current_input_.yaw_rate = -1.0f; // Turn left
-            break;
-        case 'e': case 'E':
-            current_input_.yaw_rate = 1.0f; // Turn right
-            break;
-        case 'r': case 'R':
-            current_input_.pitch_rate = 1.0f; // Pitch up
-            break;
-        case 'f': case 'F':
-            current_input_.pitch_rate = -1.0f; // Pitch down
-            break;
-        case ' ': // Spacebar
-            pause_requested_ = true;
-            break;
-        case 'c': case 'C':
-            camera_mode_changed_ = true;
-            break;
-        case 27: // ESC
-            exit_requested_ = true;
-            break;
+    if (pressed) {
+        // Key pressed - set input values
+        switch (key) {
+            case 'w': case 'W':
+                current_input_.throttle = 1.0f; // Full forward
+                break;
+            case 's': case 'S':
+                current_input_.throttle = -1.0f; // Full backward
+                break;
+            case 'a': case 'A':
+                current_input_.roll_rate = -1.0f; // Roll left
+                break;
+            case 'd': case 'D':
+                current_input_.roll_rate = 1.0f; // Roll right
+                break;
+            case 'q': case 'Q':
+                current_input_.yaw_rate = -1.0f; // Turn left
+                break;
+            case 'e': case 'E':
+                current_input_.yaw_rate = 1.0f; // Turn right
+                break;
+            case 'r': case 'R':
+                current_input_.pitch_rate = 1.0f; // Pitch up
+                break;
+            case 'f': case 'F':
+                current_input_.pitch_rate = -1.0f; // Pitch down
+                break;
+            case ' ': // Spacebar
+                pause_requested_ = true;
+                break;
+            case 'c': case 'C':
+                camera_mode_changed_ = true;
+                break;
+            case 27: // ESC
+                exit_requested_ = true;
+                break;
+        }
+    } else {
+        // Key released - reset input values
+        switch (key) {
+            case 'w': case 'W':
+            case 's': case 'S':
+                current_input_.throttle = 0.0f;
+                break;
+            case 'a': case 'A':
+            case 'd': case 'D':
+                current_input_.roll_rate = 0.0f;
+                break;
+            case 'q': case 'Q':
+            case 'e': case 'E':
+                current_input_.yaw_rate = 0.0f;
+                break;
+            case 'r': case 'R':
+            case 'f': case 'F':
+                current_input_.pitch_rate = 0.0f;
+                break;
+        }
     }
 }
 
@@ -61,8 +87,7 @@ void InputHandler::processMouse(int x, int y, int flags) {
 }
 
 void InputHandler::update(float delta_time) {
-    // Reset input smoothing - just use direct values
-    // No smoothing needed for immediate response
+    // No smoothing needed - use direct values for immediate response
     
     // Reset flags
     camera_mode_changed_ = false;

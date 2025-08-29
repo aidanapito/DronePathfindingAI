@@ -139,8 +139,21 @@ int main() {
         // Handle key input
         int key = cv::waitKey(1) & 0xFF;
         if (key != 255) {
-            input.processKey(key, true);
-            std::cout << "🔑 Key pressed: " << (char)key << std::endl;
+            if (!key_pressed[key]) {
+                // Key was just pressed
+                input.processKey(key, true);
+                key_pressed[key] = true;
+                std::cout << "🔑 Key pressed: " << (char)key << std::endl;
+            }
+        } else {
+            // No key pressed, check for released keys
+            for (auto& [k, pressed] : key_pressed) {
+                if (pressed) {
+                    input.processKey(k, false);
+                    pressed = false;
+                    std::cout << "🔑 Key released: " << (char)k << std::endl;
+                }
+            }
         }
         
         // Update input handler
