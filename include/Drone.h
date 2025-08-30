@@ -1,44 +1,44 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
-#include <chrono>
+#include <cmath>
+
+struct DroneState {
+    float x, y, z;           // Position
+    float vx, vy, vz;        // Velocity
+    float roll, pitch, yaw;  // Orientation (radians)
+};
+
+struct DroneInput {
+    float forward_thrust;    // Forward/backward thrust
+    float yaw_rate;          // Yaw rotation rate
+    float pitch_rate;        // Pitch rotation rate
+    float roll_rate;         // Roll rotation rate
+    float vertical_thrust;   // Up/down thrust
+};
 
 class Drone {
 public:
-    struct State {
-        cv::Point3f position;      // 3D position (x, y, z)
-        cv::Point3f velocity;      // 3D velocity
-        cv::Point3f orientation;   // Euler angles (roll, pitch, yaw) in radians
-        float altitude;            // Current altitude above ground
-    };
-
-    Drone(const cv::Point3f& start_pos = cv::Point3f(0, 0, 100));
+    Drone();
     
     // Update drone physics
-    void update(float delta_time, float throttle, float yaw_rate, 
-                float pitch_rate = 0.0f, float roll_rate = 0.0f, 
-                float vertical_thrust = 0.0f);
+    void update(float delta_time, const DroneInput& input);
     
     // Getters
-    const State& getState() const { return state_; }
-    cv::Point3f getPosition() const { return state_.position; }
-    cv::Point3f getOrientation() const { return state_.orientation; }
-    float getAltitude() const { return state_.altitude; }
+    DroneState getPosition() const;
+    DroneState getOrientation() const;
     
     // Physics constants
-    static constexpr float MAX_SPEED = 150.0f;        // Increased from 100.0f
-    static constexpr float MAX_ALTITUDE = 200.0f;       // Max flying height
-    static constexpr float MIN_ALTITUDE = 10.0f;        // Min flying height
-    static constexpr float TURN_RATE = 6.0f;          // Increased from 4.0f
-    static constexpr float ACCELERATION = 75.0f;      // Increased from 50.0f
-    static constexpr float DRAG = 0.98f;              // Keep same for smooth deceleration
+    static constexpr float MAX_SPEED = 150.0f;
+    static constexpr float MAX_ALTITUDE = 200.0f;
+    static constexpr float MIN_ALTITUDE = 10.0f;
+    static constexpr float TURN_RATE = 6.0f;
+    static constexpr float ACCELERATION = 75.0f;
+    static constexpr float DRAG = 0.98f;
 
 private:
-    State state_;
-    cv::Point3f acceleration_;
+    DroneState state_;
     
     // Helper methods
     void applyPhysics(float delta_time);
     void constrainMovement();
-    cv::Point3f rotateVector(const cv::Point3f& vec, const cv::Point3f& angles);
 };

@@ -1,72 +1,24 @@
 #include "InputHandler.h"
 #include <iostream>
+#include <algorithm>
 
 InputHandler::InputHandler() {
-    // Initialize all inputs to 0
     current_input_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    target_input_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    
-    // Initialize flags
     exit_requested_ = false;
     camera_mode_changed_ = false;
     pause_requested_ = false;
-    
-    // Initialize camera control
     orbit_angle_x_ = 0.0f;
     orbit_angle_y_ = 0.0f;
-    zoom_distance_ = 200.0f;
+    zoom_distance_ = 100.0f;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
-    if (pressed) {
-        // Key pressed - set input values
-        switch (key) {
-            case 'w': case 'W':
-                current_input_.throttle = 1.0f; // Full forward
-                break;
-            case 's': case 'S':
-                current_input_.throttle = -1.0f; // Full backward
-                break;
-            case 'a': case 'A':
-                current_input_.roll_rate = -1.0f; // Roll left
-                break;
-            case 'd': case 'D':
-                current_input_.roll_rate = 1.0f; // Roll right
-                break;
-            case 'q': case 'Q':
-                current_input_.yaw_rate = -1.0f; // Turn left
-                break;
-            case 'e': case 'E':
-                current_input_.yaw_rate = 1.0f; // Turn right
-                break;
-            case 'r': case 'R':
-                current_input_.pitch_rate = 1.0f; // Pitch up
-                break;
-            case 'f': case 'F':
-                current_input_.pitch_rate = -1.0f; // Pitch down
-                break;
-            case 'z': case 'Z':
-                current_input_.vertical_thrust = 1.0f; // Fly up
-                break;
-            case 'x': case 'X':
-                current_input_.vertical_thrust = -1.0f; // Fly down
-                break;
-            case ' ': // Spacebar
-                pause_requested_ = true;
-                break;
-            case 'c': case 'C':
-                camera_mode_changed_ = true;
-                break;
-            case 27: // ESC
-                exit_requested_ = true;
-                break;
-        }
-    } else {
-        // Key released - reset input values
+    if (!pressed) {
+        // Reset input when key is released
         switch (key) {
             case 'w': case 'W':
             case 's': case 'S':
-                current_input_.throttle = 0.0f;
+                current_input_.forward_thrust = 0.0f;
                 break;
             case 'a': case 'A':
             case 'd': case 'D':
@@ -85,55 +37,92 @@ void InputHandler::processKey(int key, bool pressed) {
                 current_input_.vertical_thrust = 0.0f;
                 break;
         }
+        return;
+    }
+    
+    // Handle key press
+    switch (key) {
+        case 'w': case 'W':
+            current_input_.forward_thrust = 1.0f; // Full forward
+            break;
+        case 's': case 'S':
+            current_input_.forward_thrust = -1.0f; // Full backward
+            break;
+        case 'a': case 'A':
+            current_input_.roll_rate = -1.0f; // Roll left
+            break;
+        case 'd': case 'D':
+            current_input_.roll_rate = 1.0f; // Roll right
+            break;
+        case 'q': case 'Q':
+            current_input_.yaw_rate = -1.0f; // Yaw left
+            break;
+        case 'e': case 'E':
+            current_input_.yaw_rate = 1.0f; // Yaw right
+            break;
+        case 'r': case 'R':
+            current_input_.pitch_rate = 1.0f; // Pitch up
+            break;
+        case 'f': case 'F':
+            current_input_.pitch_rate = -1.0f; // Pitch down
+            break;
+        case 'z': case 'Z':
+            current_input_.vertical_thrust = 1.0f; // Fly up
+            break;
+        case 'x': case 'X':
+            current_input_.vertical_thrust = -1.0f; // Fly down
+            break;
+        case ' ': // Spacebar
+            camera_mode_changed_ = true;
+            break;
+        case 27: // ESC key
+            exit_requested_ = true;
+            break;
+        case 'p': case 'P':
+            pause_requested_ = true;
+            break;
     }
 }
 
-void InputHandler::processMouse(int x, int y, int flags) {
-    // Mouse handling for camera control
-    if (flags & cv::EVENT_FLAG_LBUTTON) {
-        // Left mouse button - orbit camera
-        orbit(x, y);
-    }
+void InputHandler::processMouse(double xpos, double ypos) {
+    // Mouse movement for camera control
+    static double last_x = xpos;
+    static double last_y = ypos;
+    
+    double delta_x = xpos - last_x;
+    double delta_y = ypos - last_y;
+    
+    last_x = xpos;
+    last_y = ypos;
+    
+    // Apply mouse movement to camera
+    orbit(delta_x, delta_y);
 }
 
 void InputHandler::update(float delta_time) {
-    // No smoothing needed - use direct values for immediate response
-    
-    // Reset flags
+    // Reset camera mode change flag
     camera_mode_changed_ = false;
     pause_requested_ = false;
 }
 
-void InputHandler::orbit(int delta_x, int delta_y) {
-    // Simple orbit calculation
-    orbit_angle_x_ += delta_x * 0.01f;
-    orbit_angle_y_ += delta_y * 0.01f;
+void InputHandler::orbit(float delta_x, float delta_y) {
+    orbit_angle_x_ += delta_x * ORBIT_SENSITIVITY;
+    orbit_angle_y_ += delta_y * ORBIT_SENSITIVITY;
     
     // Clamp vertical angle
-    if (orbit_angle_y_ > M_PI / 3.0f) orbit_angle_y_ = M_PI / 3.0f;
-    if (orbit_angle_y_ < -M_PI / 3.0f) orbit_angle_y_ = -M_PI / 3.0f;
+    orbit_angle_y_ = std::max(-static_cast<float>(M_PI)/3.0f, std::min(static_cast<float>(M_PI)/3.0f, orbit_angle_y_));
     
-    // Wrap horizontal angle
-    orbit_angle_x_ = std::fmod(orbit_angle_x_, 2.0f * M_PI);
+    // Keep horizontal angle in range
+    orbit_angle_x_ = std::fmod(orbit_angle_x_, 2.0f*static_cast<float>(M_PI));
 }
 
 void InputHandler::zoom(float delta) {
-    zoom_distance_ += delta * 10.0f;
-    if (zoom_distance_ < 50.0f) zoom_distance_ = 50.0f;
-    if (zoom_distance_ > 500.0f) zoom_distance_ = 500.0f;
+    zoom_distance_ += delta * ZOOM_SENSITIVITY;
+    zoom_distance_ = std::max(MIN_ZOOM, std::min(MAX_ZOOM, zoom_distance_));
 }
 
 void InputHandler::resetView() {
     orbit_angle_x_ = 0.0f;
     orbit_angle_y_ = 0.0f;
-    zoom_distance_ = 200.0f;
+    zoom_distance_ = 100.0f;
 }
-
-// Getters
-const DroneInput& InputHandler::getCurrentInput() const { return current_input_; }
-bool InputHandler::isExitRequested() const { return exit_requested_; }
-bool InputHandler::isCameraModeChanged() const { return camera_mode_changed_; }
-bool InputHandler::isPauseRequested() const { return pause_requested_; }
-float InputHandler::getOrbitAngleX() const { return orbit_angle_x_; }
-float InputHandler::getOrbitAngleY() const { return orbit_angle_y_; }
-float InputHandler::getZoomDistance() const { return zoom_distance_; }

@@ -1,185 +1,150 @@
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <chrono>
-#include <map>
-#include "World.h"
 #include "Drone.h"
+#include "World.h"
 #include "Camera.h"
 #include "InputHandler.h"
+#include "Renderer.h"
+#include <iostream>
+#include <map>
+#include <chrono>
 
-// Mouse callback for OpenCV window
-void onMouse(int event, int x, int y, int flags, void* userdata) {
-    if (userdata) {
-        InputHandler* input = static_cast<InputHandler*>(userdata);
-        input->processMouse(x, y, flags);
+// Global variables for input handling
+std::map<int, bool> key_pressed;
+InputHandler* global_input_handler = nullptr;
+
+// Mouse callback for OpenGL
+void onMouse(GLFWwindow* window, double xpos, double ypos) {
+    if (global_input_handler) {
+        global_input_handler->processMouse(xpos, ypos);
+    }
+}
+
+// Key callback for OpenGL
+void onKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (global_input_handler) {
+        if (action == GLFW_PRESS) {
+            global_input_handler->processKey(key, true);
+            key_pressed[key] = true;
+        } else if (action == GLFW_RELEASE) {
+            global_input_handler->processKey(key, false);
+            key_pressed[key] = false;
+        }
     }
 }
 
 int main() {
-    std::cout << "🚁 3D Drone Simulation Starting..." << std::endl;
+    std::cout << "🚁 3D Drone Simulator with OpenGL" << std::endl;
+    std::cout << "Initializing..." << std::endl;
     
-    // Create OpenCV window
-    const std::string window_name = "3D Drone Simulator";
-    cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
+    // Initialize OpenGL renderer
+    Renderer renderer(1200, 800);
+    if (!renderer.initialize()) {
+        std::cerr << "Failed to initialize OpenGL renderer!" << std::endl;
+        return -1;
+    }
     
     // Initialize components
     World world(1200, 800, 600);
-    Drone drone(cv::Point3f(100, 100, 150));
+    Drone drone;
     Camera camera;
     InputHandler input;
     
-    // Set mouse callback after input handler is created
-    cv::setMouseCallback(window_name, onMouse, &input);
+    // Set global input handler for callbacks
+    global_input_handler = &input;
     
-    // Generate world terrain
+    // Set up OpenGL callbacks
+    GLFWwindow* window = renderer.getWindow();
+    glfwSetCursorPosCallback(window, onMouse);
+    glfwSetKeyCallback(window, onKey);
+    
+    // Generate world
     world.generateTerrain();
     
-    // Set initial camera to first-person
+    // Set initial camera mode
     camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
     
-    // Game loop variables
+    std::cout << "✅ Initialization complete!" << std::endl;
+    std::cout << "🎮 Controls:" << std::endl;
+    std::cout << "   W/S: Forward/Backward" << std::endl;
+    std::cout << "   A/D: Roll Left/Right" << std::endl;
+    std::cout << "   Q/E: Yaw Left/Right" << std::endl;
+    std::cout << "   R/F: Pitch Up/Down" << std::endl;
+    std::cout << "   Z/X: Fly Up/Down" << std::endl;
+    std::cout << "   Mouse: Look around (1st person) / Orbit (3rd person)" << std::endl;
+    std::cout << "   Space: Switch camera mode" << std::endl;
+    std::cout << "   ESC: Exit" << std::endl;
+    
+    // Game loop
     auto last_time = std::chrono::high_resolution_clock::now();
-    bool paused = false;
     
-    // Input tracking
-    std::map<int, bool> key_pressed;
-    
-    std::cout << "=== 3D Drone Simulator ===" << std::endl;
-    std::cout << "Controls:" << std::endl;
-    std::cout << "   W/S - Forward/Backward" << std::endl;
-    std::cout << "   A/D - Roll left/right" << std::endl;
-    std::cout << "   Q/E - Turn left/right (yaw)" << std::endl;
-    std::cout << "   R/F - Pitch up/down" << std::endl;
-    std::cout << "   Z/X - Fly up/down (vertical)" << std::endl;
-    std::cout << "   C - Toggle camera mode" << std::endl;
-    std::cout << "   Space - Pause" << std::endl;
-    std::cout << "   ESC - Exit" << std::endl;
-    std::cout << "   Mouse - Orbit camera (3rd person)" << std::endl;
-    std::cout << "   Mouse wheel - Zoom (3rd person)" << std::endl;
-    
-    // Main game loop
-    while (!input.isExitRequested()) {
+    while (!renderer.shouldClose()) {
         auto current_time = std::chrono::high_resolution_clock::now();
         float delta_time = std::chrono::duration<float>(current_time - last_time).count();
         last_time = current_time;
         
-        // Cap delta time to prevent huge jumps
-        delta_time = std::min(delta_time, 0.1f);
+        // Process input
+        for (const auto& [key, pressed] : key_pressed) {
+            if (pressed) {
+                input.processKey(key, true);
+            }
+        }
         
-        // Handle input
-        // Handle camera toggle
+        // Update drone physics
+        DroneInput drone_input = input.getCurrentInput();
+        drone.update(delta_time, drone_input);
+        
+        // Update camera
+        DroneState drone_pos = drone.getPosition();
+        DroneState drone_orient = drone.getOrientation();
+        camera.update(drone_pos, drone_orient);
+        
+        // Handle camera mode switching
         if (input.isCameraModeChanged()) {
             if (camera.getMode() == CameraMode::FIRST_PERSON) {
-                camera.setThirdPersonMode(drone.getPosition(), drone.getOrientation());
+                camera.setThirdPersonMode(drone_pos, drone_orient);
             } else {
-                camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
+                camera.setFirstPersonMode(drone_pos, drone_orient);
             }
         }
         
         // Handle pause
         if (input.isPauseRequested()) {
-            paused = !paused;
+            // Toggle pause state if needed
         }
         
-        // Check for exit
+        // Handle exit
         if (input.isExitRequested()) {
             break;
         }
         
-        if (!paused) {
-            // Update drone with input
-            const DroneInput& drone_input = input.getCurrentInput();
-            drone.update(delta_time, drone_input.throttle, drone_input.yaw_rate, 
-                        drone_input.pitch_rate, drone_input.roll_rate, drone_input.vertical_thrust);
-            
-            // Update camera position
-            if (camera.getMode() == CameraMode::FIRST_PERSON) {
-                camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
-            } else {
-                camera.setThirdPersonMode(drone.getPosition(), drone.getOrientation());
-            }
-        }
+        // Begin OpenGL frame
+        renderer.beginFrame();
+        renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f)); // Sky blue
         
-        // Render 3D world
-        cv::Mat frame(800, 1200, CV_8UC3, cv::Scalar(135, 206, 235)); // Sky blue background
+        // Render 3D scene
+        CameraState camera_pos = camera.getPosition();
+        CameraState camera_target = camera.getTarget();
+        CameraState camera_up = camera.getUp();
         
-        // Debug: Print camera and drone info
-        std::cout << "Camera: pos(" << camera.getPosition().x << ", " << camera.getPosition().y << ", " << camera.getPosition().z 
-                  << ") target(" << camera.getTarget().x << ", " << camera.getTarget().y << ", " << camera.getTarget().z << ")" << std::endl;
-        std::cout << "Drone: pos(" << drone.getPosition().x << ", " << drone.getPosition().y << ", " << drone.getPosition().z 
-                  << ") roll:" << drone.getOrientation().x << " pitch:" << drone.getOrientation().y << " yaw:" << drone.getOrientation().z << std::endl;
+        glm::vec3 gl_camera_pos(camera_pos.x, camera_pos.y, camera_pos.z);
+        glm::vec3 gl_camera_target(camera_target.x, camera_target.y, camera_target.z);
+        glm::vec3 gl_camera_up(camera_up.x, camera_up.y, camera_up.z);
         
-        // Render world from camera perspective
-        world.render3D(frame, camera.getPosition(), camera.getTarget());
+        renderer.render3DScene(gl_camera_pos, gl_camera_target, gl_camera_up, world.getObstacles());
         
-        // Render drone
-        cv::Point2f drone_screen = world.project3DTo2D(drone.getPosition(), 
-                                                      camera.getPosition(), 
-                                                      camera.getTarget());
-        if (drone_screen.x >= 0 && drone_screen.x < frame.cols && 
-            drone_screen.y >= 0 && drone_screen.y < frame.rows) {
-            cv::circle(frame, drone_screen, 8, cv::Scalar(0, 255, 0), -1); // Green drone
-        }
+        // End frame and swap buffers
+        renderer.endFrame();
+        renderer.swapBuffers();
         
-        // Render UI
-        std::string mode_text = (camera.getMode() == CameraMode::FIRST_PERSON) ? "1st Person" : "3rd Person";
-        cv::putText(frame, "Camera: " + mode_text, cv::Point(10, 30), 
-                   cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 2);
+        // Poll events
+        renderer.pollEvents();
         
-        cv::putText(frame, "Position: (" + std::to_string((int)drone.getPosition().x) + 
-                   ", " + std::to_string((int)drone.getPosition().y) + 
-                   ", " + std::to_string((int)drone.getPosition().z) + ")", 
-                   cv::Point(10, 60), cv::FONT_HERSHEY_SIMPLEX, 0.6, 
-                   cv::Scalar(255, 255, 255), 2);
-        
-        if (paused) {
-            cv::putText(frame, "PAUSED", cv::Point(frame.cols/2 - 100, frame.rows/2), 
-                       cv::FONT_HERSHEY_SIMPLEX, 2.0, cv::Scalar(0, 0, 255), 3);
-        }
-        
-        // Display frame
-        cv::imshow(window_name, frame);
-        
-        // Handle key input
-        int key = cv::waitKey(1) & 0xFF;
-        if (key != 255) {
-            if (!key_pressed[key]) {
-                // Key was just pressed
-                input.processKey(key, true);
-                key_pressed[key] = true;
-                std::cout << "🔑 Key pressed: " << (char)key << std::endl;
-            }
-        } else {
-            // No key pressed, check for released keys
-            for (auto& [k, pressed] : key_pressed) {
-                if (pressed) {
-                    input.processKey(k, false);
-                    pressed = false;
-                    std::cout << "🔑 Key released: " << (char)k << std::endl;
-                }
-            }
-        }
-        
-        // Update input handler
-        input.update(delta_time);
-        
-        // Get current input values
-        const DroneInput& current_input = input.getCurrentInput();
-        
-        // Debug: Print current input values
-        std::cout << "Input - T:" << current_input.throttle 
-                  << " Y:" << current_input.yaw_rate 
-                  << " P:" << current_input.pitch_rate 
-                  << " R:" << current_input.roll_rate 
-                  << " V:" << current_input.vertical_thrust << std::endl;
-        
-        // Check for window close
-        if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1) {
-            break;
-        }
+        // Debug output
+        std::cout << "\rDrone: pos(" << drone.getPosition().x << ", " << drone.getPosition().y << ", " << drone.getPosition().z 
+                  << ") roll:" << drone.getOrientation().x << " pitch:" << drone.getOrientation().y << " yaw:" << drone.getOrientation().z 
+                  << " | Input - T:" << drone_input.forward_thrust << " Y:" << drone_input.yaw_rate << " P:" << drone_input.pitch_rate 
+                  << " R:" << drone_input.roll_rate << " V:" << drone_input.vertical_thrust << "    " << std::flush;
     }
     
-    std::cout << "👋 Simulation ended. Goodbye!" << std::endl;
-    cv::destroyAllWindows();
+    std::cout << "\n👋 Simulation ended. Goodbye!" << std::endl;
     return 0;
 }

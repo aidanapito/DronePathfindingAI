@@ -1,52 +1,63 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
+#include "Drone.h"
+#include <cmath>
 
 enum class CameraMode {
-    FIRST_PERSON,   // Camera is the drone (you see through drone's eyes)
-    THIRD_PERSON    // Camera follows behind the drone
+    FIRST_PERSON,
+    THIRD_PERSON
+};
+
+struct CameraState {
+    float x, y, z;           // Position
+    float target_x, target_y, target_z;  // Look target
+    float up_x, up_y, up_z;  // Up vector
 };
 
 class Camera {
 public:
     Camera();
     
-    // Camera positioning
-    void setFirstPersonMode(const cv::Point3f& drone_pos, const cv::Point3f& drone_orientation);
-    void setThirdPersonMode(const cv::Point3f& drone_pos, const cv::Point3f& drone_orientation);
+    // Camera mode switching
+    void setFirstPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
+    void setThirdPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
+    
+    // Camera updates
+    void update(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
     
     // Camera controls
-    void orbit(float delta_x, float delta_y);  // Mouse movement for third-person
-    void zoom(float delta);                    // Mouse wheel
+    void orbit(float delta_x, float delta_y);
+    void zoom(float delta);
     void resetView();
     
-    // Helper methods
-    cv::Point3f rotateVector(const cv::Point3f& vec, const cv::Point3f& angles);
-    
     // Getters
-    cv::Point3f getPosition() const { return position_; }
-    cv::Point3f getTarget() const { return target_; }
-    cv::Point3f getUp() const { return up_; }
     CameraMode getMode() const { return mode_; }
+    CameraState getPosition() const { return position_; }
+    CameraState getTarget() const { return target_; }
+    CameraState getUp() const { return up_; }
     
-    // Camera settings
-    static constexpr float THIRD_PERSON_DISTANCE = 200.0f;  // Distance behind drone
-    static constexpr float THIRD_PERSON_HEIGHT = 100.0f;    // Height above drone
-    static constexpr float MIN_ZOOM = 50.0f;               // Closest zoom
-    static constexpr float MAX_ZOOM = 500.0f;              // Farthest zoom
+    // Helper methods
+    CameraState rotateVector(const CameraState& vec, const CameraState& angles);
 
 private:
-    cv::Point3f position_;      // Camera position
-    cv::Point3f target_;        // Where camera is looking
-    cv::Point3f up_;            // Up vector
-    CameraMode mode_;           // Current camera mode
+    CameraMode mode_;
+    CameraState position_;
+    CameraState target_;
+    CameraState up_;
     
-    // Third-person camera state
-    float orbit_angle_x_;       // Horizontal orbit angle
-    float orbit_angle_y_;       // Vertical orbit angle
-    float zoom_distance_;       // Current zoom distance
+    // Third-person camera parameters
+    float orbit_angle_x_;
+    float orbit_angle_y_;
+    float zoom_distance_;
+    
+    // Constants
+    static constexpr float THIRD_PERSON_HEIGHT = 50.0f;
+    static constexpr float ORBIT_SENSITIVITY = 0.01f;
+    static constexpr float ZOOM_SENSITIVITY = 10.0f;
+    static constexpr float MIN_ZOOM = 20.0f;
+    static constexpr float MAX_ZOOM = 200.0f;
     
     // Helper methods
-    void updateThirdPersonPosition(const cv::Point3f& drone_pos, const cv::Point3f& drone_orientation);
-    cv::Point3f calculateOrbitPosition(float angle_x, float angle_y, float distance);
+    void updateThirdPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
+    CameraState calculateOrbitPosition(float angle_x, float angle_y, float distance);
 };
