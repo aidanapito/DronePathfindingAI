@@ -26,12 +26,12 @@ public:
     float getAltitude() const { return state_.altitude; }
     
     // Physics constants
-    static constexpr float MAX_SPEED = 100.0f;          // Max forward speed (units/sec) - doubled for responsiveness
+    static constexpr float MAX_SPEED = 150.0f;        // Increased from 100.0f
     static constexpr float MAX_ALTITUDE = 200.0f;       // Max flying height
     static constexpr float MIN_ALTITUDE = 10.0f;        // Min flying height
-    static constexpr float TURN_RATE = 4.0f;            // Max turn rate (rad/sec) - doubled for responsiveness
-    static constexpr float ACCELERATION = 50.0f;        // Forward acceleration (units/sec²) - doubled for responsiveness
-    static constexpr float DRAG = 0.98f;                // Air resistance factor - reduced for more responsive movement
+    static constexpr float TURN_RATE = 6.0f;          // Increased from 4.0f
+    static constexpr float ACCELERATION = 75.0f;      // Increased from 50.0f
+    static constexpr float DRAG = 0.98f;              // Keep same for smooth deceleration
 
 private:
     State state_;
