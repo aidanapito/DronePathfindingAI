@@ -10,6 +10,7 @@ InputHandler::InputHandler() {
     orbit_angle_x_ = 0.0f;
     orbit_angle_y_ = 0.0f;
     zoom_distance_ = 100.0f;
+    camera_ = nullptr;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
@@ -49,16 +50,16 @@ void InputHandler::processKey(int key, bool pressed) {
             current_input_.forward_thrust = -1.0f; // Full backward
             break;
         case 'a': case 'A':
-            current_input_.roll_rate = -1.0f; // Roll left
+            current_input_.roll_rate = 1.0f; // Roll left
             break;
         case 'd': case 'D':
-            current_input_.roll_rate = 1.0f; // Roll right
+            current_input_.roll_rate = -1.0f; // Roll right
             break;
         case 'q': case 'Q':
-            current_input_.yaw_rate = -1.0f; // Yaw left
+            current_input_.yaw_rate = 1.0f; // Yaw left
             break;
         case 'e': case 'E':
-            current_input_.yaw_rate = 1.0f; // Yaw right
+            current_input_.yaw_rate = -1.0f; // Yaw right
             break;
         case 'r': case 'R':
             current_input_.pitch_rate = 1.0f; // Pitch up
@@ -73,7 +74,18 @@ void InputHandler::processKey(int key, bool pressed) {
             current_input_.vertical_thrust = -1.0f; // Fly down
             break;
         case ' ': // Spacebar
-            camera_mode_changed_ = true;
+            if (camera_) {
+                // Immediately switch camera mode to prevent switching loop
+                if (camera_->getMode() == CameraMode::FIRST_PERSON) {
+                    camera_->setThirdPersonMode({0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0});
+                    std::cout << "Switched to THIRD_PERSON mode" << std::endl;
+                } else {
+                    camera_->setFirstPersonMode({0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0});
+                    std::cout << "Switched to FIRST_PERSON mode" << std::endl;
+                }
+            } else {
+                std::cout << "Warning: Camera not set in InputHandler" << std::endl;
+            }
             break;
         case 27: // ESC key
             exit_requested_ = true;
@@ -95,8 +107,11 @@ void InputHandler::processMouse(double xpos, double ypos) {
     last_x = xpos;
     last_y = ypos;
     
-    // Apply mouse movement to camera
-    orbit(delta_x, delta_y);
+    // Only apply mouse movement if there's significant movement (reduce jitter)
+    if (std::abs(delta_x) > MOUSE_DEADZONE || std::abs(delta_y) > MOUSE_DEADZONE) {
+        // Apply mouse movement to camera
+        orbit(delta_x, delta_y);
+    }
 }
 
 void InputHandler::update(float delta_time) {

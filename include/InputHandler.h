@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Drone.h"
+#include "Camera.h"
 
 class InputHandler {
 public:
@@ -12,6 +13,9 @@ public:
     
     // Input updates
     void update(float delta_time);
+    
+    // Camera setup
+    void setCamera(Camera* camera) { camera_ = camera; }
     
     // Getters
     DroneInput getCurrentInput() const { return current_input_; }
@@ -33,6 +37,7 @@ public:
 
 private:
     DroneInput current_input_;
+    Camera* camera_;  // Reference to camera for immediate mode switching
     
     // Input state
     bool exit_requested_;
@@ -45,8 +50,14 @@ private:
     float zoom_distance_;
     
     // Constants
-    static constexpr float ORBIT_SENSITIVITY = 0.01f;
-    static constexpr float ZOOM_SENSITIVITY = 10.0f;
+    static constexpr float ORBIT_SENSITIVITY = 0.002f;  // Further reduced for much slower camera movement
+    static constexpr float ZOOM_SENSITIVITY = 2.0f;     // Further reduced for much slower zooming
     static constexpr float MIN_ZOOM = 20.0f;
     static constexpr float MAX_ZOOM = 200.0f;
+    
+    // Additional sensitivity controls
+    static constexpr float MOUSE_DEADZONE = 1.0f;       // Minimum mouse movement to register
+    static constexpr float DRONE_ROLL_SENSITIVITY = 1.0f;   // Can be adjusted for drone roll speed
+    static constexpr float DRONE_YAW_SENSITIVITY = 1.0f;    // Can be adjusted for drone yaw speed
+    static constexpr float DRONE_PITCH_SENSITIVITY = 1.0f;  // Can be adjusted for drone pitch speed
 };

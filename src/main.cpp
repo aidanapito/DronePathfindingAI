@@ -51,6 +51,9 @@ int main() {
     // Set global input handler for callbacks
     global_input_handler = &input;
     
+    // Set camera reference in input handler for immediate mode switching
+    input.setCamera(&camera);
+    
     // Set up OpenGL callbacks
     GLFWwindow* window = renderer.getWindow();
     glfwSetCursorPosCallback(window, onMouse);
@@ -88,6 +91,9 @@ int main() {
             }
         }
         
+        // Process immediate actions (like space key for camera switching)
+        // These are handled in the InputHandler callbacks
+        
         // Update drone physics
         DroneInput drone_input = input.getCurrentInput();
         drone.update(delta_time, drone_input);
@@ -97,14 +103,8 @@ int main() {
         DroneState drone_orient = drone.getOrientation();
         camera.update(drone_pos, drone_orient);
         
-        // Handle camera mode switching
-        if (input.isCameraModeChanged()) {
-            if (camera.getMode() == CameraMode::FIRST_PERSON) {
-                camera.setThirdPersonMode(drone_pos, drone_orient);
-            } else {
-                camera.setFirstPersonMode(drone_pos, drone_orient);
-            }
-        }
+        // Handle camera mode switching - this is now handled immediately in the InputHandler
+        // The flag is reset in InputHandler::update() to prevent multiple switches
         
         // Handle pause
         if (input.isPauseRequested()) {

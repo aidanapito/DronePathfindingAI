@@ -40,8 +40,8 @@ void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct
     float up_y = 0.0f;
     float up_z = 1.0f;
     
-    // Apply roll to up vector
-    CameraState roll_angles = {roll, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    // Apply roll to up vector with reduced sensitivity
+    CameraState roll_angles = {roll * CAMERA_ROLL_SENSITIVITY, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     CameraState rotated_up = rotateVector({up_x, up_y, up_z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, roll_angles);
     
     // Set target 100 units ahead
@@ -84,9 +84,45 @@ void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct
     mode_ = CameraMode::THIRD_PERSON;
 }
 
+void Camera::updateFirstPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
+    // Set camera position to drone position
+    position_.x = drone_pos.x;
+    position_.y = drone_pos.y;
+    position_.z = drone_pos.z;
+    
+    // Calculate forward direction based on drone orientation
+    float yaw = drone_orient.yaw;
+    float pitch = drone_orient.pitch;
+    float roll = drone_orient.roll;
+    
+    // Calculate forward vector
+    float forward_x = cos(yaw) * cos(pitch);
+    float forward_y = sin(yaw) * cos(pitch);
+    float forward_z = -sin(pitch);
+    
+    // Calculate up vector
+    float up_x = 0.0f;
+    float up_y = 0.0f;
+    float up_z = 1.0f;
+    
+    // Apply roll to up vector with reduced sensitivity
+    CameraState roll_angles = {roll * CAMERA_ROLL_SENSITIVITY, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    CameraState rotated_up = rotateVector({up_x, up_y, up_z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, roll_angles);
+    
+    // Set target 100 units ahead
+    target_.x = position_.x + forward_x * 100.0f;
+    target_.y = position_.y + forward_y * 100.0f;
+    target_.z = position_.z + forward_z * 100.0f;
+    
+    // Set up vector
+    up_.x = rotated_up.x;
+    up_.y = rotated_up.y;
+    up_.z = rotated_up.z;
+}
+
 void Camera::update(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
     if (mode_ == CameraMode::FIRST_PERSON) {
-        setFirstPersonMode(drone_pos, drone_orient);
+        updateFirstPersonPosition(drone_pos, drone_orient);
     } else {
         updateThirdPersonPosition(drone_pos, drone_orient);
     }

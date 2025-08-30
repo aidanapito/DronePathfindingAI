@@ -52,12 +52,14 @@ private:
     
     // Constants
     static constexpr float THIRD_PERSON_HEIGHT = 50.0f;
-    static constexpr float ORBIT_SENSITIVITY = 0.01f;
-    static constexpr float ZOOM_SENSITIVITY = 10.0f;
+    static constexpr float ORBIT_SENSITIVITY = 0.002f;  // Further reduced for much slower camera movement
+    static constexpr float ZOOM_SENSITIVITY = 2.0f;     // Further reduced for much slower zooming
     static constexpr float MIN_ZOOM = 20.0f;
     static constexpr float MAX_ZOOM = 200.0f;
+    static constexpr float CAMERA_ROLL_SENSITIVITY = 0.3f;  // Reduce camera roll effect from drone roll
     
     // Helper methods
+    void updateFirstPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
     void updateThirdPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
     CameraState calculateOrbitPosition(float angle_x, float angle_y, float distance);
 };
