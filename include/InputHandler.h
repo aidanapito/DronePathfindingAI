@@ -2,6 +2,7 @@
 
 #include "Drone.h"
 #include "Camera.h"
+#include <unordered_map>
 
 class InputHandler {
 public:
@@ -24,6 +25,10 @@ public:
     bool isExitRequested() const { return exit_requested_; }
     bool isCameraModeChanged() const { return camera_mode_changed_; }
     bool isPauseRequested() const { return pause_requested_; }
+    bool shouldSwitchCameraMode() const { return should_switch_camera_mode_; }
+    
+    // Reset flags after handling
+    void resetCameraSwitchFlag() { should_switch_camera_mode_ = false; }
     
     // Camera controls
     void orbit(float delta_x, float delta_y);
@@ -43,10 +48,10 @@ private:
     bool exit_requested_;
     bool camera_mode_changed_;
     bool pause_requested_;
+    bool should_switch_camera_mode_; // Flag for camera mode switching
     
-    // Debounce for camera mode switching
-    bool space_key_pressed_;
-    float last_space_press_time_;
+    // Key state tracking
+    std::unordered_map<int, bool> key_states_;
     
     // Camera state
     float orbit_angle_x_;
@@ -64,7 +69,4 @@ private:
     static constexpr float DRONE_ROLL_SENSITIVITY = 1.0f;   // Can be adjusted for drone roll speed
     static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;    // Reduced yaw sensitivity for slower turning
     static constexpr float DRONE_PITCH_SENSITIVITY = 1.0f;  // Can be adjusted for drone pitch speed
-    
-    // Debounce timing
-    static constexpr float SPACE_DEBOUNCE_TIME = 0.2f;   // Minimum time between space key presses (seconds)
 };

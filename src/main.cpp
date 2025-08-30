@@ -86,25 +86,28 @@ int main() {
         
         // Process input
         for (const auto& [key, pressed] : key_pressed) {
-            if (pressed) {
-                input.processKey(key, true);
-            }
+            input.processKey(key, pressed);
         }
         
-        // Process immediate actions (like space key for camera switching)
-        // These are handled in the InputHandler callbacks
+        // Update input handler to calculate current input values
+        input.update(delta_time);
         
         // Update drone physics
         DroneInput drone_input = input.getCurrentInput();
         drone.update(delta_time, drone_input);
         
-        // Update camera
+        // Get current drone state
         DroneState drone_pos = drone.getPosition();
-        DroneState drone_orient = drone.getOrientation();
-        camera.update(drone_pos, drone_orient);
+        DroneState drone_orient = drone.getOrientationOnly();  // Get only orientation values
         
-        // Handle camera mode switching - this is now handled immediately in the InputHandler
-        // The flag is reset in InputHandler::update() to prevent multiple switches
+        // Handle camera mode switching if requested
+        if (input.shouldSwitchCameraMode()) {
+            camera.switchMode(drone_pos, drone_orient);
+            input.resetCameraSwitchFlag(); // Reset the flag after handling
+        }
+        
+        // Update camera with current drone state
+        camera.update(drone_pos, drone_orient);
         
         // Handle pause
         if (input.isPauseRequested()) {
@@ -146,8 +149,8 @@ int main() {
         renderer.pollEvents();
         
         // Debug output
-        std::cout << "\rDrone: pos(" << drone.getPosition().x << ", " << drone.getPosition().y << ", " << drone.getPosition().z 
-                  << ") roll:" << drone.getOrientation().x << " pitch:" << drone.getOrientation().y << " yaw:" << drone.getOrientation().z 
+        std::cout << "\rDrone: pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
+                  << ") roll:" << drone_orient.roll << " pitch:" << drone_orient.pitch << " yaw:" << drone_orient.yaw 
                   << " | Input - T:" << drone_input.forward_thrust << " Y:" << drone_input.yaw_rate << " P:" << drone_input.pitch_rate 
                   << " R:" << drone_input.roll_rate << " V:" << drone_input.vertical_thrust << "    " << std::flush;
     }

@@ -26,6 +26,7 @@ public:
     // Getters
     DroneState getPosition() const;
     DroneState getOrientation() const;
+    DroneState getOrientationOnly() const;  // Returns only orientation values
     
     // Physics constants
     static constexpr float MAX_SPEED = 150.0f;

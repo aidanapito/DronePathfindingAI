@@ -7,94 +7,31 @@ InputHandler::InputHandler() {
     exit_requested_ = false;
     camera_mode_changed_ = false;
     pause_requested_ = false;
+    should_switch_camera_mode_ = false;
     orbit_angle_x_ = 0.0f;
     orbit_angle_y_ = 0.0f;
     zoom_distance_ = 100.0f;
     camera_ = nullptr;
-    space_key_pressed_ = false;
-    last_space_press_time_ = 0.0f;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
-    if (!pressed) {
-        // Reset input when key is released
+    // Update key state
+    key_states_[key] = pressed;
+    
+    // Handle immediate actions that don't depend on continuous input
+    if (pressed) {
         switch (key) {
-            case 'w': case 'W':
-            case 's': case 'S':
-                current_input_.forward_thrust = 0.0f;
+            case ' ': // Spacebar - immediate camera mode switch
+                should_switch_camera_mode_ = true;
+                std::cout << "Camera mode switch requested" << std::endl;
                 break;
-            case 'a': case 'A':
-            case 'd': case 'D':
-                current_input_.roll_rate = 0.0f;
+            case 27: // ESC key
+                exit_requested_ = true;
                 break;
-            case 'q': case 'Q':
-            case 'e': case 'E':
-                current_input_.yaw_rate = 0.0f;
-                break;
-            case 'r': case 'R':
-            case 'f': case 'F':
-                current_input_.pitch_rate = 0.0f;
-                break;
-            case 'z': case 'Z':
-            case 'x': case 'X':
-                current_input_.vertical_thrust = 0.0f;
+            case 'p': case 'P':
+                pause_requested_ = true;
                 break;
         }
-        return;
-    }
-    
-    // Handle key press
-    switch (key) {
-        case 'w': case 'W':
-            current_input_.forward_thrust = 1.0f; // Full forward
-            break;
-        case 's': case 'S':
-            current_input_.forward_thrust = -1.0f; // Full backward
-            break;
-        case 'a': case 'A':
-            current_input_.roll_rate = 1.0f; // Roll left
-            break;
-        case 'd': case 'D':
-            current_input_.roll_rate = -1.0f; // Roll right
-            break;
-        case 'q': case 'Q':
-            current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY; // Yaw left (with sensitivity)
-            break;
-        case 'e': case 'E':
-            current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY; // Yaw right (with sensitivity)
-            break;
-        case 'r': case 'R':
-            current_input_.pitch_rate = 1.0f; // Pitch up
-            break;
-        case 'f': case 'F':
-            current_input_.pitch_rate = -1.0f; // Pitch down
-            break;
-        case 'z': case 'Z':
-            current_input_.vertical_thrust = 1.0f; // Fly up
-            break;
-        case 'x': case 'X':
-            current_input_.vertical_thrust = -1.0f; // Fly down
-            break;
-        case ' ': // Spacebar
-            if (camera_) {
-                // Simple camera mode switching - no debounce for now
-                if (camera_->getMode() == CameraMode::FIRST_PERSON) {
-                    camera_->setThirdPersonMode({0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0});
-                    std::cout << "Switched to THIRD_PERSON mode" << std::endl;
-                } else {
-                    camera_->setFirstPersonMode({0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0});
-                    std::cout << "Switched to FIRST_PERSON mode" << std::endl;
-                }
-            } else {
-                std::cout << "Warning: Camera not set in InputHandler" << std::endl;
-            }
-            break;
-        case 27: // ESC key
-            exit_requested_ = true;
-            break;
-        case 'p': case 'P':
-            pause_requested_ = true;
-            break;
     }
 }
 
@@ -111,8 +48,13 @@ void InputHandler::processMouse(double xpos, double ypos) {
     
     // Only apply mouse movement if there's significant movement (reduce jitter)
     if (std::abs(delta_x) > MOUSE_DEADZONE || std::abs(delta_y) > MOUSE_DEADZONE) {
-        // Apply mouse movement to camera
-        orbit(delta_x, delta_y);
+        // Apply mouse movement to camera if available
+        if (camera_) {
+            camera_->handleMouseInput(delta_x, delta_y);
+        } else {
+            // Fallback to local orbit if camera not available
+            orbit(delta_x, delta_y);
+        }
     }
 }
 
@@ -121,9 +63,51 @@ void InputHandler::update(float delta_time) {
     camera_mode_changed_ = false;
     pause_requested_ = false;
     
-    // Update debounce timer
-    if (space_key_pressed_) {
-        last_space_press_time_ += delta_time;
+    // Calculate continuous input based on current key states
+    current_input_.forward_thrust = 0.0f;
+    current_input_.roll_rate = 0.0f;
+    current_input_.yaw_rate = 0.0f;
+    current_input_.pitch_rate = 0.0f;
+    current_input_.vertical_thrust = 0.0f;
+    
+    // Check W/S keys for forward/backward thrust
+    if (key_states_['w'] || key_states_['W']) {
+        current_input_.forward_thrust = 1.0f;
+    }
+    if (key_states_['s'] || key_states_['S']) {
+        current_input_.forward_thrust = -1.0f;
+    }
+    
+    // Check A/D keys for roll
+    if (key_states_['a'] || key_states_['A']) {
+        current_input_.roll_rate = 1.0f;
+    }
+    if (key_states_['d'] || key_states_['D']) {
+        current_input_.roll_rate = -1.0f;
+    }
+    
+    // Check Q/E keys for yaw
+    if (key_states_['q'] || key_states_['Q']) {
+        current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY;
+    }
+    if (key_states_['e'] || key_states_['E']) {
+        current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY;
+    }
+    
+    // Check R/F keys for pitch
+    if (key_states_['r'] || key_states_['R']) {
+        current_input_.pitch_rate = 1.0f;
+    }
+    if (key_states_['f'] || key_states_['F']) {
+        current_input_.pitch_rate = -1.0f;
+    }
+    
+    // Check Z/X keys for vertical thrust
+    if (key_states_['z'] || key_states_['Z']) {
+        current_input_.vertical_thrust = 1.0f;
+    }
+    if (key_states_['x'] || key_states_['X']) {
+        current_input_.vertical_thrust = -1.0f;
     }
 }
 

@@ -21,50 +21,64 @@ Camera::Camera() {
 }
 
 void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Set camera position slightly above and forward of drone center to avoid being inside the drone body
-    // Drone body is 2x2x1 units, so we offset by half the height and a bit forward
-    position_.x = drone_pos.x;
-    position_.y = drone_pos.y + 1.0f;  // Move 1 unit forward from center
-    position_.z = drone_pos.z + 0.5f;  // Move 0.5 units up from center (half drone height)
-    
-    // Calculate forward direction based on drone orientation
+    // Set camera position in front of the drone, not inside it
     float yaw = drone_orient.yaw;
     float pitch = drone_orient.pitch;
     float roll = drone_orient.roll;
     
+    // Calculate forward direction based on drone orientation
+    // In this coordinate system: X=left/right, Y=forward/backward, Z=up/down
+    // This must match the drone's coordinate system in Drone.cpp
+    float forward_x = sin(yaw) * cos(pitch);   // Right/left component (matches drone)
+    float forward_y = cos(yaw) * cos(pitch);   // Forward/backward component (matches drone)
+    float forward_z = sin(pitch);              // Up/down component (matches drone)
+    
+    // Position camera 2 units in front of the drone center, slightly elevated
+    position_.x = drone_pos.x + forward_x * 2.0f;
+    position_.y = drone_pos.y + forward_y * 2.0f;
+    position_.z = drone_pos.z + forward_z * 2.0f + 0.5f;  // Move 0.5 units up from calculated position
+    
     // Debug output to understand coordinate system
     std::cout << "Setting 1st person: Drone pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
               << ") yaw:" << yaw << " | Camera pos(" << position_.x << ", " << position_.y << ", " << position_.z << ")" << std::endl;
-    
-    // Calculate forward vector
-    float forward_x = cos(yaw) * cos(pitch);
-    float forward_y = sin(yaw) * cos(pitch);
-    float forward_z = -sin(pitch);
     
     // Calculate up vector
     float up_x = 0.0f;
     float up_y = 0.0f;
     float up_z = 1.0f;
     
-    // Apply roll to up vector with reduced sensitivity
+    // Apply roll to up vector with reduced sensitivity for more stable camera
     CameraState roll_angles = {roll * CAMERA_ROLL_SENSITIVITY, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     CameraState rotated_up = rotateVector({up_x, up_y, up_z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, roll_angles);
     
-    // Set target 100 units ahead
+    // Set target 100 units ahead in the direction the drone is facing
     target_.x = position_.x + forward_x * 100.0f;
     target_.y = position_.y + forward_y * 100.0f;
     target_.z = position_.z + forward_z * 100.0f;
     
-    // Set up vector
+    // Set up vector - use rotated up for roll effect, but ensure it's normalized
     up_.x = rotated_up.x;
     up_.y = rotated_up.y;
     up_.z = rotated_up.z;
+    
+    // Normalize up vector to prevent issues
+    float up_length = sqrt(up_.x * up_.x + up_.y * up_.y + up_.z * up_.z);
+    if (up_length > 0.001f) {
+        up_.x /= up_length;
+        up_.y /= up_length;
+        up_.z /= up_length;
+    } else {
+        // Fallback to world up if rotation failed
+        up_.x = 0.0f;
+        up_.y = 0.0f;
+        up_.z = 1.0f;
+    }
     
     mode_ = CameraMode::FIRST_PERSON;
 }
 
 void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Calculate camera position directly behind and above the drone
+    // Calculate camera position behind and above the drone, following its forward direction
     float yaw = drone_orient.yaw;
     
     // Debug output to understand coordinate system
@@ -73,6 +87,8 @@ void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct
     
     // Position camera behind drone, following its forward direction
     // When drone faces forward (yaw = 0), camera should be behind (negative Y)
+    // When drone faces right (yaw = π/2), camera should be to the left (negative X)
+    // When drone faces left (yaw = -π/2), camera should be to the right (positive X)
     float offset_x = -sin(yaw) * 100.0f;     // Left/right offset based on yaw
     float offset_y = -cos(yaw) * 100.0f;     // Forward/backward offset based on yaw
     float offset_z = THIRD_PERSON_HEIGHT;     // Above the drone
@@ -86,7 +102,7 @@ void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct
     target_.y = drone_pos.y;
     target_.z = drone_pos.z;
     
-    // Set up vector
+    // Set up vector - always point up in world space
     up_.x = 0.0f;
     up_.y = 0.0f;
     up_.z = 1.0f;
@@ -94,41 +110,63 @@ void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct
     mode_ = CameraMode::THIRD_PERSON;
 }
 
+void Camera::switchMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
+    if (mode_ == CameraMode::FIRST_PERSON) {
+        setThirdPersonMode(drone_pos, drone_orient);
+    } else {
+        setFirstPersonMode(drone_pos, drone_orient);
+    }
+}
+
 void Camera::updateFirstPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Set camera position slightly above and forward of drone center to avoid being inside the drone body
-    // Drone body is 2x2x1 units, so we offset by half the height and a bit forward
-    position_.x = drone_pos.x;
-    position_.y = drone_pos.y + 1.0f;  // Move 1 unit forward from center
-    position_.z = drone_pos.z + 0.5f;  // Move 0.5 units up from center (half drone height)
-    
-    // Calculate forward direction based on drone orientation
+    // Set camera position in front of the drone, not inside it
     float yaw = drone_orient.yaw;
     float pitch = drone_orient.pitch;
     float roll = drone_orient.roll;
     
-    // Calculate forward vector
-    float forward_x = cos(yaw) * cos(pitch);
-    float forward_y = sin(yaw) * cos(pitch);
-    float forward_z = -sin(pitch);
+    // Calculate forward direction based on drone orientation
+    // In this coordinate system: X=left/right, Y=forward/backward, Z=up/down
+    // This must match the drone's coordinate system in Drone.cpp
+    float forward_x = sin(yaw) * cos(pitch);   // Right/left component (matches drone)
+    float forward_y = cos(yaw) * cos(pitch);   // Forward/backward component (matches drone)
+    float forward_z = sin(pitch);              // Up/down component (matches drone)
+    
+    // Position camera 2 units in front of the drone center, slightly elevated
+    position_.x = drone_pos.x + forward_x * 2.0f;
+    position_.y = drone_pos.y + forward_y * 2.0f;
+    position_.z = drone_pos.z + forward_z * 2.0f + 0.5f;  // Move 0.5 units up from calculated position
     
     // Calculate up vector
     float up_x = 0.0f;
     float up_y = 0.0f;
     float up_z = 1.0f;
     
-    // Apply roll to up vector with reduced sensitivity
+    // Apply roll to up vector with reduced sensitivity for more stable camera
     CameraState roll_angles = {roll * CAMERA_ROLL_SENSITIVITY, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     CameraState rotated_up = rotateVector({up_x, up_y, up_z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, roll_angles);
     
-    // Set target 100 units ahead
+    // Set target 100 units ahead in the direction the drone is facing
     target_.x = position_.x + forward_x * 100.0f;
     target_.y = position_.y + forward_y * 100.0f;
     target_.z = position_.z + forward_z * 100.0f;
     
-    // Set up vector
+    // Set up vector - use rotated up for roll effect, but ensure it's normalized
     up_.x = rotated_up.x;
     up_.y = rotated_up.y;
     up_.z = rotated_up.z;
+    
+    // Normalize up vector to prevent issues
+    float up_length = sqrt(up_.x * up_.x + up_.y * up_.y + up_.z * up_.z);
+    if (up_length > 0.001f) {
+        up_.x /= up_length;
+        up_.y /= up_length;
+        up_.z /= up_length;
+    } else {
+        // Fallback to world up if rotation failed
+        up_.x = 0.0f;
+        up_.y = 0.0f;
+        up_.z = 1.0f;
+    }
 }
 
 void Camera::update(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
@@ -145,6 +183,7 @@ void Camera::updateThirdPersonPosition(const struct DroneState& drone_pos, const
     
     // Calculate camera position behind the drone (in the direction it's facing)
     // When drone faces forward (yaw = 0), camera should be behind (negative Y)
+    // When drone faces right (yaw = π/2), camera should be to the left (negative X)
     float offset_x = -sin(yaw) * 100.0f;     // Left/right offset based on yaw
     float offset_y = -cos(yaw) * 100.0f;     // Forward/backward offset based on yaw
     float offset_z = THIRD_PERSON_HEIGHT;     // Above the drone
@@ -178,6 +217,18 @@ void Camera::orbit(float delta_x, float delta_y) {
     
     // Keep horizontal angle in range
     orbit_angle_x_ = std::fmod(orbit_angle_x_, 2.0f*static_cast<float>(M_PI));
+}
+
+void Camera::handleMouseInput(float delta_x, float delta_y) {
+    if (mode_ == CameraMode::FIRST_PERSON) {
+        // In first person mode, mouse controls the camera's look direction
+        // This would typically control pitch and yaw of the view
+        // For now, we'll just orbit around the current position
+        orbit(delta_x, delta_y);
+    } else {
+        // In third person mode, mouse controls the camera orbit around the drone
+        orbit(delta_x, delta_y);
+    }
 }
 
 void Camera::zoom(float delta) {

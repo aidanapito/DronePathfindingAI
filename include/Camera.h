@@ -21,6 +21,7 @@ public:
     // Camera mode switching
     void setFirstPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
     void setThirdPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
+    void switchMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
     
     // Camera updates
     void update(const struct DroneState& drone_pos, const struct DroneState& drone_orient);
@@ -29,6 +30,9 @@ public:
     void orbit(float delta_x, float delta_y);
     void zoom(float delta);
     void resetView();
+    
+    // Mouse input handling
+    void handleMouseInput(float delta_x, float delta_y);
     
     // Getters
     CameraMode getMode() const { return mode_; }

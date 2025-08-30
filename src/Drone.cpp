@@ -27,6 +27,14 @@ void Drone::update(float delta_time, const DroneInput& input) {
     state_.pitch += pitch_torque * delta_time;
     state_.yaw += yaw_torque * delta_time;
     
+    // Apply orientation damping to prevent extreme values (only when no input is applied)
+    if (std::abs(input.roll_rate) < 0.01f) {
+        state_.roll *= 0.95f;  // 5% damping per frame when no roll input
+    }
+    if (std::abs(input.pitch_rate) < 0.01f) {
+        state_.pitch *= 0.95f; // 5% damping per frame when no pitch input
+    }
+    
     // Clamp roll and pitch to prevent flipping
     state_.roll = std::max(-static_cast<float>(M_PI)/4.0f, std::min(static_cast<float>(M_PI)/4.0f, state_.roll));
     state_.pitch = std::max(-static_cast<float>(M_PI)/6.0f, std::min(static_cast<float>(M_PI)/6.0f, state_.pitch));
@@ -58,6 +66,21 @@ DroneState Drone::getPosition() const {
 
 DroneState Drone::getOrientation() const {
     return state_;
+}
+
+DroneState Drone::getOrientationOnly() const {
+    // Return only orientation values, with position and velocity set to 0
+    DroneState orientation_only;
+    orientation_only.x = 0.0f;
+    orientation_only.y = 0.0f;
+    orientation_only.z = 0.0f;
+    orientation_only.vx = 0.0f;
+    orientation_only.vy = 0.0f;
+    orientation_only.vz = 0.0f;
+    orientation_only.roll = state_.roll;
+    orientation_only.pitch = state_.pitch;
+    orientation_only.yaw = state_.yaw;
+    return orientation_only;
 }
 
 void Drone::applyPhysics(float delta_time) {
