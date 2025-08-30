@@ -58,6 +58,6 @@ private:
     // Additional sensitivity controls
     static constexpr float MOUSE_DEADZONE = 1.0f;       // Minimum mouse movement to register
     static constexpr float DRONE_ROLL_SENSITIVITY = 1.0f;   // Can be adjusted for drone roll speed
-    static constexpr float DRONE_YAW_SENSITIVITY = 1.0f;    // Can be adjusted for drone yaw speed
+    static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;    // Reduced yaw sensitivity for slower turning
     static constexpr float DRONE_PITCH_SENSITIVITY = 1.0f;  // Can be adjusted for drone pitch speed
 };

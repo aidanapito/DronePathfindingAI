@@ -72,6 +72,23 @@ static constexpr float CAMERA_ROLL_SENSITIVITY = 1.0f;
 static constexpr float CAMERA_ROLL_SENSITIVITY = 0.1f;
 ```
 
+### **Drone Yaw Sensitivity (Q/E Key Effect)**
+**File:** `include/InputHandler.h`
+
+```cpp
+// Current setting (slower yaw)
+static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;
+
+// Make Q/E turn very slowly
+static constexpr float DRONE_YAW_SENSITIVITY = 0.3f;
+
+// Make Q/E turn at normal speed
+static constexpr float DRONE_YAW_SENSITIVITY = 1.0f;
+
+// Make Q/E turn very fast
+static constexpr float DRONE_YAW_SENSITIVITY = 2.0f;
+```
+
 **What this affects:**
 - How fast the camera zooms in/out
 - Lower values = slower zooming
@@ -119,6 +136,7 @@ static constexpr float ORBIT_SENSITIVITY = 0.001f;    // Extremely slow camera
 static constexpr float ZOOM_SENSITIVITY = 1.0f;       // Very slow zoom
 static constexpr float MOUSE_DEADZONE = 2.0f;         // Large deadzone
 static constexpr float CAMERA_ROLL_SENSITIVITY = 0.1f; // Minimal camera roll effect
+static constexpr float DRONE_YAW_SENSITIVITY = 0.3f;   // Very slow yaw turning
 ```
 
 ### **For Experienced Users (Fast, Responsive Movement)**
@@ -134,6 +152,7 @@ static constexpr float ORBIT_SENSITIVITY = 0.002f;    // Current setting
 static constexpr float ZOOM_SENSITIVITY = 2.0f;       // Current setting
 static constexpr float MOUSE_DEADZONE = 1.0f;         // Current setting
 static constexpr float CAMERA_ROLL_SENSITIVITY = 0.3f; // Current setting
+static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;   // Current setting
 ```
 
 ## 🔄 **How to Apply Changes**

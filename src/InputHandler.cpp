@@ -56,10 +56,10 @@ void InputHandler::processKey(int key, bool pressed) {
             current_input_.roll_rate = -1.0f; // Roll right
             break;
         case 'q': case 'Q':
-            current_input_.yaw_rate = 1.0f; // Yaw left
+            current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY; // Yaw left (with sensitivity)
             break;
         case 'e': case 'E':
-            current_input_.yaw_rate = -1.0f; // Yaw right
+            current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY; // Yaw right (with sensitivity)
             break;
         case 'r': case 'R':
             current_input_.pitch_rate = 1.0f; // Pitch up

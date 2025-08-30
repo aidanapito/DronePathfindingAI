@@ -150,8 +150,9 @@ void Camera::updateThirdPersonPosition(const struct DroneState& drone_pos, const
 
 CameraState Camera::calculateOrbitPosition(float angle_x, float angle_y, float distance) {
     // Calculate position on a sphere
+    // Adjust coordinate system so camera starts behind the drone (negative Y)
     float x = distance * cos(angle_y) * sin(angle_x);
-    float y = distance * cos(angle_y) * cos(angle_x);
+    float y = -distance * cos(angle_y) * cos(angle_x); // Negative to start behind
     float z = distance * sin(angle_y);
     
     return {x, y, z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
@@ -174,9 +175,9 @@ void Camera::zoom(float delta) {
 }
 
 void Camera::resetView() {
-    orbit_angle_x_ = 0.0f;
-    orbit_angle_y_ = 0.0f;
-    zoom_distance_ = 100.0f;
+    orbit_angle_x_ = 0.0f;        // Start looking straight ahead
+    orbit_angle_y_ = 0.0f;        // Start at drone level
+    zoom_distance_ = 100.0f;      // Start at medium distance
 }
 
 CameraState Camera::rotateVector(const CameraState& vec, const CameraState& angles) {
