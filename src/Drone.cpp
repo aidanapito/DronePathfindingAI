@@ -35,8 +35,9 @@ void Drone::update(float delta_time, const DroneInput& input) {
     state_.yaw = std::fmod(state_.yaw + 2.0f*static_cast<float>(M_PI), 2.0f*static_cast<float>(M_PI));
     
     // Calculate forward direction based on yaw and pitch
-    float forward_dir_x = cos(state_.yaw) * cos(state_.pitch);
-    float forward_dir_y = sin(state_.yaw) * cos(state_.pitch);
+    // Align with visual orientation: Y is forward, X is right
+    float forward_dir_x = sin(state_.yaw) * cos(state_.pitch);  // Right/left component
+    float forward_dir_y = cos(state_.yaw) * cos(state_.pitch);  // Forward/backward component
     float forward_dir_z = sin(state_.pitch);
     
     // Apply forces

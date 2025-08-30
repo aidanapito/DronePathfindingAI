@@ -131,6 +131,13 @@ int main() {
         
         renderer.render3DScene(gl_camera_pos, gl_camera_target, gl_camera_up, world.getObstacles());
         
+        // Render the drone with H-frame design
+        glm::vec3 drone_position(drone_pos.x, drone_pos.y, drone_pos.z);
+        glm::vec3 drone_orientation(drone_orient.roll, drone_orient.pitch, drone_orient.yaw);
+        glm::vec3 drone_color(0.0f, 0.7f, 1.0f); // Bright blue color
+        
+        renderer.renderHFrameDrone(drone_position, drone_orientation, drone_color);
+        
         // End frame and swap buffers
         renderer.endFrame();
         renderer.swapBuffers();

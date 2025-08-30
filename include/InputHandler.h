@@ -44,6 +44,10 @@ private:
     bool camera_mode_changed_;
     bool pause_requested_;
     
+    // Debounce for camera mode switching
+    bool space_key_pressed_;
+    float last_space_press_time_;
+    
     // Camera state
     float orbit_angle_x_;
     float orbit_angle_y_;
@@ -60,4 +64,7 @@ private:
     static constexpr float DRONE_ROLL_SENSITIVITY = 1.0f;   // Can be adjusted for drone roll speed
     static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;    // Reduced yaw sensitivity for slower turning
     static constexpr float DRONE_PITCH_SENSITIVITY = 1.0f;  // Can be adjusted for drone pitch speed
+    
+    // Debounce timing
+    static constexpr float SPACE_DEBOUNCE_TIME = 0.2f;   // Minimum time between space key presses (seconds)
 };

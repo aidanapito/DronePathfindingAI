@@ -13,6 +13,8 @@ This guide shows you how to adjust various sensitivity settings in your drone si
 5. **Mouse jitter reduced** - Added deadzone to prevent tiny movements
 6. **Space key camera switching now works** - Fixed camera mode update logic
 7. **A/D camera roll effect reduced** - Added camera roll sensitivity control (30% of drone roll)
+8. **3rd person camera now properly behind drone** - Fixed coordinate system positioning
+9. **Space key debouncing added** - Prevents rapid camera mode switching
 
 ## 🔧 **How to Adjust Sensitivity**
 
@@ -88,6 +90,19 @@ static constexpr float DRONE_YAW_SENSITIVITY = 1.0f;
 // Make Q/E turn very fast
 static constexpr float DRONE_YAW_SENSITIVITY = 2.0f;
 ```
+
+### **Space Key Debounce Timing**
+**File:** `include/InputHandler.h`
+
+```cpp
+// Current setting (0.5 second delay)
+static constexpr float SPACE_DEBOUNCE_TIME = 0.5f;
+
+// Make space key more responsive
+static constexpr float SPACE_DEBOUNCE_TIME = 0.2f;
+
+// Make space key less responsive (prevent accidental switching)
+static constexpr float SPACE_DEBOUNCE_TIME = 1.0f;
 
 **What this affects:**
 - How fast the camera zooms in/out

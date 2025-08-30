@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 Camera::Camera() {
     position_.x = 0.0f;
@@ -20,15 +21,20 @@ Camera::Camera() {
 }
 
 void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Set camera position to drone position
+    // Set camera position slightly above and forward of drone center to avoid being inside the drone body
+    // Drone body is 2x2x1 units, so we offset by half the height and a bit forward
     position_.x = drone_pos.x;
-    position_.y = drone_pos.y;
-    position_.z = drone_pos.z;
+    position_.y = drone_pos.y + 1.0f;  // Move 1 unit forward from center
+    position_.z = drone_pos.z + 0.5f;  // Move 0.5 units up from center (half drone height)
     
     // Calculate forward direction based on drone orientation
     float yaw = drone_orient.yaw;
     float pitch = drone_orient.pitch;
     float roll = drone_orient.roll;
+    
+    // Debug output to understand coordinate system
+    std::cout << "Setting 1st person: Drone pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
+              << ") yaw:" << yaw << " | Camera pos(" << position_.x << ", " << position_.y << ", " << position_.z << ")" << std::endl;
     
     // Calculate forward vector
     float forward_x = cos(yaw) * cos(pitch);
@@ -58,14 +64,18 @@ void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct
 }
 
 void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Calculate camera position behind and above the drone
+    // Calculate camera position directly behind and above the drone
     float yaw = drone_orient.yaw;
-    float pitch = drone_orient.pitch;
     
-    // Position camera behind drone
-    float offset_x = -cos(yaw) * zoom_distance_;
-    float offset_y = -sin(yaw) * zoom_distance_;
-    float offset_z = THIRD_PERSON_HEIGHT;
+    // Debug output to understand coordinate system
+    std::cout << "Setting 3rd person: Drone pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
+              << ") yaw:" << yaw << " | Camera pos(" << drone_pos.x << ", " << (drone_pos.y - 100.0f) << ", " << (drone_pos.z + THIRD_PERSON_HEIGHT) << ")" << std::endl;
+    
+    // Position camera behind drone, following its forward direction
+    // When drone faces forward (yaw = 0), camera should be behind (negative Y)
+    float offset_x = -sin(yaw) * 100.0f;     // Left/right offset based on yaw
+    float offset_y = -cos(yaw) * 100.0f;     // Forward/backward offset based on yaw
+    float offset_z = THIRD_PERSON_HEIGHT;     // Above the drone
     
     position_.x = drone_pos.x + offset_x;
     position_.y = drone_pos.y + offset_y;
@@ -85,10 +95,11 @@ void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct
 }
 
 void Camera::updateFirstPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Set camera position to drone position
+    // Set camera position slightly above and forward of drone center to avoid being inside the drone body
+    // Drone body is 2x2x1 units, so we offset by half the height and a bit forward
     position_.x = drone_pos.x;
-    position_.y = drone_pos.y;
-    position_.z = drone_pos.z;
+    position_.y = drone_pos.y + 1.0f;  // Move 1 unit forward from center
+    position_.z = drone_pos.z + 0.5f;  // Move 0.5 units up from center (half drone height)
     
     // Calculate forward direction based on drone orientation
     float yaw = drone_orient.yaw;
@@ -129,18 +140,18 @@ void Camera::update(const struct DroneState& drone_pos, const struct DroneState&
 }
 
 void Camera::updateThirdPersonPosition(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Calculate orbit position
-    CameraState orbit_pos = calculateOrbitPosition(orbit_angle_x_, orbit_angle_y_, zoom_distance_);
-    
-    // Apply drone's yaw to the orbit
+    // Position camera behind and above the drone, following its forward direction
     float yaw = drone_orient.yaw;
-    float rotated_x = orbit_pos.x * cos(yaw) - orbit_pos.y * sin(yaw);
-    float rotated_y = orbit_pos.x * sin(yaw) + orbit_pos.y * cos(yaw);
     
-    // Set camera position
-    position_.x = drone_pos.x + rotated_x;
-    position_.y = drone_pos.y + rotated_y;
-    position_.z = drone_pos.z + orbit_pos.z + THIRD_PERSON_HEIGHT;
+    // Calculate camera position behind the drone (in the direction it's facing)
+    // When drone faces forward (yaw = 0), camera should be behind (negative Y)
+    float offset_x = -sin(yaw) * 100.0f;     // Left/right offset based on yaw
+    float offset_y = -cos(yaw) * 100.0f;     // Forward/backward offset based on yaw
+    float offset_z = THIRD_PERSON_HEIGHT;     // Above the drone
+    
+    position_.x = drone_pos.x + offset_x;
+    position_.y = drone_pos.y + offset_y;
+    position_.z = drone_pos.z + offset_z;
     
     // Look at drone
     target_.x = drone_pos.x;

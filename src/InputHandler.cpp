@@ -11,6 +11,8 @@ InputHandler::InputHandler() {
     orbit_angle_y_ = 0.0f;
     zoom_distance_ = 100.0f;
     camera_ = nullptr;
+    space_key_pressed_ = false;
+    last_space_press_time_ = 0.0f;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
@@ -75,7 +77,7 @@ void InputHandler::processKey(int key, bool pressed) {
             break;
         case ' ': // Spacebar
             if (camera_) {
-                // Immediately switch camera mode to prevent switching loop
+                // Simple camera mode switching - no debounce for now
                 if (camera_->getMode() == CameraMode::FIRST_PERSON) {
                     camera_->setThirdPersonMode({0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0});
                     std::cout << "Switched to THIRD_PERSON mode" << std::endl;
@@ -118,6 +120,11 @@ void InputHandler::update(float delta_time) {
     // Reset camera mode change flag
     camera_mode_changed_ = false;
     pause_requested_ = false;
+    
+    // Update debounce timer
+    if (space_key_pressed_) {
+        last_space_press_time_ += delta_time;
+    }
 }
 
 void InputHandler::orbit(float delta_x, float delta_y) {
