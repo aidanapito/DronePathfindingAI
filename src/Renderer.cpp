@@ -346,9 +346,14 @@ bool Renderer::setupBuffers() {
     // Ground vertices - transformed to match new coordinate system
     // Original: X=left/right, Y=forward/backward, Z=up/down
     // New: X=left/right, Y=up/down, Z=forward/backward
+    // Using two triangles instead of triangle fan to avoid rendering issues
     float groundVertices[] = {
+        // First triangle
         -1000.0f, 0.0f, -1000.0f,  // X=left, Y=ground level, Z=backward
          1000.0f, 0.0f, -1000.0f,  // X=right, Y=ground level, Z=backward
+         1000.0f, 0.0f,  1000.0f,  // X=right, Y=ground level, Z=forward
+        // Second triangle
+        -1000.0f, 0.0f, -1000.0f,  // X=left, Y=ground level, Z=backward
          1000.0f, 0.0f,  1000.0f,  // X=right, Y=ground level, Z=forward
         -1000.0f, 0.0f,  1000.0f   // X=left, Y=ground level, Z=forward
     };
@@ -448,12 +453,13 @@ void Renderer::renderGround() {
     // Set ground color
     glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(0.2f, 0.8f, 0.2f)));
     
-    // Create ground model matrix
+    // Create ground model matrix - position slightly below 0 to avoid z-fighting
     glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, -0.1f, 0.0f));
     glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
     
-    // Draw ground
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    // Draw ground as two triangles instead of triangle fan
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void Renderer::renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson) {
@@ -494,7 +500,8 @@ void Renderer::renderXFrameDrone(const glm::vec3& position, const glm::vec3& ori
 
 void Renderer::renderSkybox() {
     // Skybox rendering (simplified for now)
-    glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
+    // Set sky color but don't clear here - let the main clear handle it
+    // glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
 }
 
 unsigned int Renderer::createShader(const std::string& vertexSource, const std::string& fragmentSource) {
