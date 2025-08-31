@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <chrono>
+#include <cmath> // For sqrt
 
 // Global variables for input handling
 std::map<int, bool> key_pressed;
@@ -110,11 +111,32 @@ int main() {
         
         // Check for collisions if playing
         if (current_game_state == GameState::PLAYING) {
-            // Check collision with buildings (using drone radius of 5.0f)
-            if (world.checkCollision(drone_pos.x, drone_pos.y, drone_pos.z, 5.0f)) {
+            // Debug: Print drone position occasionally
+            static int debug_counter = 0;
+            if (++debug_counter % 60 == 0) { // Every 60 frames (about once per second)
+                std::cout << "\rDrone at: (" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ") - ";
+                // Check if we're near any buildings
+                bool near_building = false;
+                for (const auto& obs : world.getObstacles()) {
+                    float dx = drone_pos.x - obs.x;
+                    float dy = drone_pos.y - obs.y;
+                    float dz = drone_pos.z - obs.z;
+                    float distance = sqrt(dx*dx + dy*dy + dz*dz);
+                    if (distance < 50.0f) { // Within 50 units of a building
+                        near_building = true;
+                        break;
+                    }
+                }
+                std::cout << (near_building ? "Near building" : "Not near building") << "    " << std::flush;
+            }
+            
+            // Check collision with buildings (using smaller drone radius for more sensitive detection)
+            if (world.checkCollision(drone_pos.x, drone_pos.y, drone_pos.z, 2.0f)) {
                 current_game_state = GameState::CRASHED;
                 std::cout << "\n💥 CRASH! You hit a building!" << std::endl;
+                std::cout << "Drone position: (" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ")" << std::endl;
                 std::cout << "Press 'R' to restart or 'ESC' to exit" << std::endl;
+                std::cout << "Game state changed to CRASHED" << std::endl;
             }
         }
         
@@ -129,6 +151,9 @@ int main() {
                 
                 // Reset camera
                 camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
+                
+                // Reset renderer state
+                renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f)); // Reset to sky blue
                 
                 // Clear any held keys to prevent immediate restart
                 key_pressed.clear();
@@ -187,6 +212,7 @@ int main() {
         
         // Render crash message if crashed
         if (current_game_state == GameState::CRASHED) {
+            std::cout << "\rRendering crash message..." << std::flush;
             renderer.renderCrashMessage();
         }
         
