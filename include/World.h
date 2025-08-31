@@ -66,6 +66,7 @@ private:
     
     // Terrain generation helpers
     void generateSkyscraper(float x, float y);
+    void generateCitySkyscraper(float x, float y, float height);
     void generateGroundObstacle(float x, float y);
     void generateMountain(float x, float y, float height);
     void generateBridge(float x, float y, float rotation);

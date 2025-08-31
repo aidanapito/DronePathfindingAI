@@ -153,7 +153,8 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
                 } else {
                     color = glm::vec3(0.6f, 0.6f, 0.6f); // Gray
                 }
-                size = glm::vec3(40.0f, 40.0f, 100.0f);
+                // Use actual obstacle dimensions and make it vertical (height in Y direction)
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
                 break;
             case ObstacleType::GROUND_OBSTACLE:
                 color = glm::vec3(0.55f, 0.27f, 0.07f); // Brown

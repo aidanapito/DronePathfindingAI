@@ -10,15 +10,43 @@ void World::generateTerrain() {
     // Clear existing obstacles
     obstacles_.clear();
     
-    // Create a simple, functional world with well-spaced structures
+    // Create a city-like environment with dense skyscrapers
+    // This creates streets between the buildings
     
-    // Add a few key skyscrapers in strategic locations
-    generateSkyscraper(width_ * 0.25f, height_ * 0.25f);
-    generateSkyscraper(width_ * 0.75f, height_ * 0.75f);
-    generateSkyscraper(width_ * 0.5f, height_ * 0.3f);
+    // City grid parameters
+    float cityWidth = width_ * 0.8f;  // Use 80% of world width
+    float cityHeight = height_ * 0.8f; // Use 80% of world height
+    float blockSize = cityWidth / 4.0f; // 4 blocks across
+    float buildingSpacing = blockSize / 3.0f; // 3 buildings per block
     
-    // Add just a few key structures for navigation challenges
-    addWindTurbines(2); // Two wind turbines
+    // Starting position for the grid
+    float startX = (width_ - cityWidth) / 2.0f;
+    float startY = (height_ - cityHeight) / 2.0f;
+    
+    // Generate dense city grid with multiple buildings per block
+    for (int blockRow = 0; blockRow < 4; ++blockRow) {
+        for (int blockCol = 0; blockCol < 4; ++blockCol) {
+            // For each block, add multiple buildings
+            for (int buildingRow = 0; buildingRow < 3; ++buildingRow) {
+                for (int buildingCol = 0; buildingCol < 3; ++buildingCol) {
+                    // Calculate building position within the block
+                    float blockX = startX + blockCol * blockSize;
+                    float blockY = startY + blockRow * blockSize;
+                    float x = blockX + (buildingCol + 0.5f) * buildingSpacing;
+                    float y = blockY + (buildingRow + 0.5f) * buildingSpacing;
+                    
+                    // Generate random height for variety (40-180 units)
+                    float buildingHeight = 40.0f + (rng_() % 140);
+                    
+                    // Create skyscraper with custom height
+                    generateCitySkyscraper(x, y, buildingHeight);
+                }
+            }
+        }
+    }
+    
+    // Add a few wind turbines outside the city
+    addWindTurbines(2);
 }
 
 void World::addSkyscrapers(int count) {
@@ -123,14 +151,21 @@ void World::generateLandmark(float x, float y, int landmarkType) {
 }
 
 void World::generateSkyscraper(float x, float y) {
+    generateCitySkyscraper(x, y, 100.0f); // Default height
+}
+
+void World::generateCitySkyscraper(float x, float y, float height) {
     Obstacle skyscraper;
     skyscraper.x = x;
     skyscraper.y = y;
-    skyscraper.z = 50.0f;  // Center height above ground
-    skyscraper.radius = 20.0f;
-    skyscraper.height = 100.0f;
-    skyscraper.is_vertical = true;
+    skyscraper.z = height / 2.0f;  // Center height above ground
+    skyscraper.radius = 15.0f;     // Smaller radius for denser city
+    skyscraper.height = height;
+    skyscraper.is_vertical = true; // Ensure it's vertical
     skyscraper.type = ObstacleType::SKYSCRAPER;
+    skyscraper.rotation = 0.0f;
+    skyscraper.width = 30.0f;   // Building width
+    skyscraper.depth = 30.0f;   // Building depth
     obstacles_.push_back(skyscraper);
 }
 
