@@ -506,7 +506,7 @@ void Renderer::renderSkybox() {
 }
 
 void Renderer::renderCrashMessage() {
-    // Simple crash message rendering - just clear to black
+    // Simple crash message rendering - black screen with colored rectangles
     // This will definitely work on all systems
     
     // Clear the screen to black
@@ -526,26 +526,28 @@ void Renderer::renderCrashMessage() {
     // Disable depth testing for overlay
     glDisable(GL_DEPTH_TEST);
     
-    // Draw white rectangles to simulate text
+    // Calculate center position
     float centerX = width_ / 2.0f;
     float centerY = height_ / 2.0f;
     
-    // Draw "YOU CRASHED" rectangle
+    // Draw "YOU CRASHED!" text as bright red rectangles
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(centerX, centerY, 0.0f));
-    model = glm::scale(model, glm::vec3(200.0f, 40.0f, 1.0f));
+    model = glm::translate(model, glm::vec3(centerX, centerY - 50.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(300.0f, 60.0f, 1.0f));
     
     glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f))); // White
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f))); // Bright red
     
     glDrawArrays(GL_TRIANGLES, 0, 36); // Draw cube
     
-    // Draw "PRESS R TO RESTART" rectangle
+    // Draw "PRESS R TO RESTART" text as bright green rectangles
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(centerX, centerY + 60.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(160.0f, 20.0f, 1.0f));
+    model = glm::translate(model, glm::vec3(centerX, centerY + 50.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(250.0f, 40.0f, 1.0f));
     
     glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f))); // Bright green
+    
     glDrawArrays(GL_TRIANGLES, 0, 36); // Draw cube
     
     // Re-enable depth testing

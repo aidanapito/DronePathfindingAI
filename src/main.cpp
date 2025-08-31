@@ -155,7 +155,7 @@ int main() {
                 // Reset renderer state properly
                 renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f)); // Reset to sky blue
                 
-                // Force a complete screen refresh
+                // Force a complete screen refresh with proper projection
                 renderer.beginFrame();
                 renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f));
                 
