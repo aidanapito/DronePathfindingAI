@@ -31,6 +31,7 @@ public:
     // Drone rendering
     void renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson = false);
     void renderCrashMessage();
+    void renderText(const std::string& text, float x, float y, float scale, const glm::vec3& color);
     
     // Camera setup
     void setProjectionMatrix(float fov, float aspect, float near, float far);

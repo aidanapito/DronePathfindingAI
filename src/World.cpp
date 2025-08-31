@@ -330,13 +330,30 @@ void World::generateMountain(float x, float y, float height) {
 
 bool World::checkCollision(float x, float y, float z, float radius) const {
     for (const auto& obs : obstacles_) {
-        float dx = x - obs.x;
-        float dy = y - obs.y;
-        float dz = z - obs.z;
-        float distance = sqrt(dx*dx + dy*dy + dz*dz);
-        
-        if (distance < (radius + obs.radius)) {
-            return true; // Collision detected
+        if (obs.type == ObstacleType::SKYSCRAPER) {
+            // For skyscrapers, use rectangular collision detection
+            float halfWidth = obs.width / 2.0f;
+            float halfDepth = obs.depth / 2.0f;
+            float halfHeight = obs.height / 2.0f;
+            
+            // Check if drone is within the building's rectangular bounds
+            bool inX = (x >= obs.x - halfWidth - radius) && (x <= obs.x + halfWidth + radius);
+            bool inY = (y >= obs.y - halfDepth - radius) && (y <= obs.y + halfDepth + radius);
+            bool inZ = (z >= obs.z - halfHeight - radius) && (z <= obs.z + halfHeight + radius);
+            
+            if (inX && inY && inZ) {
+                return true; // Collision detected
+            }
+        } else {
+            // For other objects, use circular collision detection
+            float dx = x - obs.x;
+            float dy = y - obs.y;
+            float dz = z - obs.z;
+            float distance = sqrt(dx*dx + dy*dy + dz*dz);
+            
+            if (distance < (radius + obs.radius)) {
+                return true; // Collision detected
+            }
         }
     }
     return false;

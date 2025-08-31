@@ -152,13 +152,17 @@ int main() {
                 // Reset camera
                 camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
                 
-                // Reset renderer state
+                // Reset renderer state properly
                 renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f)); // Reset to sky blue
+                
+                // Force a complete screen refresh
+                renderer.beginFrame();
+                renderer.clear(glm::vec3(0.5f, 0.7f, 1.0f));
                 
                 // Clear any held keys to prevent immediate restart
                 key_pressed.clear();
                 
-                std::cout << "\n🔄 Restarting simulation..." << std::endl;
+                std::cout << "Game restarted!" << std::endl;
             }
         }
         

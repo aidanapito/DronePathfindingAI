@@ -513,8 +513,214 @@ void Renderer::renderCrashMessage() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    // Force the screen to update
-    glFlush();
+    // Use the existing shader program for simple text rendering
+    glUseProgram(shaderProgram_);
+    
+    // Set up orthographic projection for 2D overlay
+    glm::mat4 projection = glm::ortho(0.0f, (float)width_, (float)height_, 0.0f, -1.0f, 1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    
+    glUniformMatrix4fv(projectionLoc_, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc_, 1, GL_FALSE, glm::value_ptr(view));
+    
+    // Disable depth testing for overlay
+    glDisable(GL_DEPTH_TEST);
+    
+    // Draw white rectangles to simulate text
+    float centerX = width_ / 2.0f;
+    float centerY = height_ / 2.0f;
+    
+    // Draw "YOU CRASHED" rectangle
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(centerX, centerY, 0.0f));
+    model = glm::scale(model, glm::vec3(200.0f, 40.0f, 1.0f));
+    
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f))); // White
+    
+    glDrawArrays(GL_TRIANGLES, 0, 36); // Draw cube
+    
+    // Draw "PRESS R TO RESTART" rectangle
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(centerX, centerY + 60.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(160.0f, 20.0f, 1.0f));
+    
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawArrays(GL_TRIANGLES, 0, 36); // Draw cube
+    
+    // Re-enable depth testing
+    glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::renderText(const std::string& text, float x, float y, float scale, const glm::vec3& color) {
+    // Simple text rendering using basic OpenGL
+    // This creates a simple bitmap font effect
+    
+    // Save current OpenGL state
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    
+    // Disable depth testing for text overlay
+    glDisable(GL_DEPTH_TEST);
+    
+    // Set up orthographic projection for 2D text
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, width_, height_, 0, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Set text color
+    glColor3f(color.r, color.g, color.b);
+    
+    // Simple text rendering using GL_LINES to draw characters
+    glBegin(GL_LINES);
+    
+    float charWidth = 8.0f * scale;
+    float charHeight = 12.0f * scale;
+    float currentX = x;
+    
+    for (char c : text) {
+        // Simple character rendering using lines
+        // Each character is drawn as a series of line segments
+        switch (c) {
+            case 'Y':
+                // Draw Y shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth/2, y + charHeight/2);
+                glVertex2f(currentX + charWidth/2, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth/2, y + charHeight/2);
+                glVertex2f(currentX + charWidth/2, y + charHeight);
+                break;
+            case 'O':
+                // Draw O shape (rectangle)
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y);
+                break;
+            case 'U':
+                // Draw U shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth, y);
+                break;
+            case 'C':
+                // Draw C shape
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                break;
+            case 'R':
+                // Draw R shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                break;
+            case 'A':
+                // Draw A shape
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX + charWidth/2, y);
+                glVertex2f(currentX + charWidth/2, y);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth/4, y + charHeight/2);
+                glVertex2f(currentX + charWidth*3/4, y + charHeight/2);
+                break;
+            case 'S':
+                // Draw S shape
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                break;
+            case 'H':
+                // Draw H shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                break;
+            case 'E':
+                // Draw E shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                break;
+            case 'D':
+                // Draw D shape
+                glVertex2f(currentX, y);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth*2/3, y);
+                glVertex2f(currentX + charWidth*2/3, y);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth, y + charHeight/2);
+                glVertex2f(currentX + charWidth*2/3, y + charHeight);
+                glVertex2f(currentX + charWidth*2/3, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                break;
+            case ' ':
+                // Space - just move position
+                break;
+            default:
+                // Default character (simple rectangle)
+                glVertex2f(currentX, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX + charWidth, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y + charHeight);
+                glVertex2f(currentX, y);
+                break;
+        }
+        
+        currentX += charWidth + 2.0f * scale; // Add spacing between characters
+    }
+    
+    glEnd();
+    
+    // Restore OpenGL state
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glPopAttrib();
 }
 
 unsigned int Renderer::createShader(const std::string& vertexSource, const std::string& fragmentSource) {
