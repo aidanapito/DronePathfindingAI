@@ -28,5 +28,15 @@ void main()
     vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);
     
     vec3 result = (ambient + diffuse + specular) * objectColor;
+    
+    // Atmospheric fog effect
+    float distance = length(FragPos - viewPos);
+    float fogStart = 200.0;
+    float fogEnd = 800.0;
+    float fogFactor = clamp((distance - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
+    vec3 fogColor = vec3(0.7, 0.8, 1.0); // Sky blue fog
+    
+    result = mix(result, fogColor, fogFactor);
+    
     FragColor = vec4(result, 1.0);
 }

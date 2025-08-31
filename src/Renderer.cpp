@@ -145,7 +145,14 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
         
         switch (obstacle.type) {
             case ObstacleType::SKYSCRAPER:
-                color = glm::vec3(0.6f, 0.6f, 0.6f); // Gray
+                // Vary skyscraper colors based on height
+                if (obstacle.height > 150.0f) {
+                    color = glm::vec3(0.8f, 0.8f, 0.9f); // Light blue-gray for tall buildings
+                } else if (obstacle.height > 100.0f) {
+                    color = glm::vec3(0.7f, 0.7f, 0.8f); // Medium blue-gray
+                } else {
+                    color = glm::vec3(0.6f, 0.6f, 0.6f); // Gray
+                }
                 size = glm::vec3(40.0f, 40.0f, 100.0f);
                 break;
             case ObstacleType::GROUND_OBSTACLE:
@@ -156,13 +163,81 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
                 color = glm::vec3(0.4f, 0.4f, 0.4f); // Dark gray
                 size = glm::vec3(80.0f, 80.0f, 60.0f);
                 break;
+            case ObstacleType::BRIDGE:
+                color = glm::vec3(0.3f, 0.3f, 0.3f); // Dark gray
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::TUNNEL:
+                color = glm::vec3(0.2f, 0.2f, 0.2f); // Very dark gray
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::ARCH:
+                color = glm::vec3(0.7f, 0.7f, 0.7f); // Light gray
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::PYRAMID:
+                color = glm::vec3(0.8f, 0.6f, 0.2f); // Gold/sand
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::SPHERE_BUILDING:
+                // Vary sphere building colors
+                if (obstacle.height > 100.0f) {
+                    color = glm::vec3(0.1f, 0.4f, 0.7f); // Dark blue for tall spheres
+                } else {
+                    color = glm::vec3(0.2f, 0.6f, 0.8f); // Blue
+                }
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::WIND_TURBINE:
+                color = glm::vec3(0.9f, 0.9f, 0.9f); // White
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::RADIO_TOWER:
+                color = glm::vec3(0.1f, 0.1f, 0.1f); // Very dark
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::WATER_TOWER:
+                color = glm::vec3(0.8f, 0.8f, 0.8f); // Light gray
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
+            case ObstacleType::FACTORY:
+                color = glm::vec3(0.5f, 0.3f, 0.1f); // Brown/industrial
+                size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
+                break;
             default:
                 color = glm::vec3(1.0f, 1.0f, 1.0f); // White
                 size = glm::vec3(20.0f, 20.0f, 20.0f);
                 break;
         }
         
-        renderCube(position, size, color);
+        // Apply rotation for directional objects and use appropriate rendering method
+        if (obstacle.rotation != 0.0f) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, position);
+            model = glm::rotate(model, obstacle.rotation, glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::scale(model, size);
+            glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform3fv(colorLoc_, 1, glm::value_ptr(color));
+            glDrawArrays(GL_TRIANGLES, 0, 36); // Draw cube
+        } else {
+            // Use appropriate rendering method based on obstacle type
+            switch (obstacle.type) {
+                case ObstacleType::PYRAMID:
+                    renderPyramid(position, size, color);
+                    break;
+                case ObstacleType::SPHERE_BUILDING:
+                    renderSphere(position, size.x / 2.0f, color); // radius = width/2
+                    break;
+                case ObstacleType::WIND_TURBINE:
+                case ObstacleType::RADIO_TOWER:
+                case ObstacleType::WATER_TOWER:
+                    renderCylinder(position, obstacle.radius, obstacle.height, color);
+                    break;
+                default:
+                    renderCube(position, size, color);
+                    break;
+            }
+        }
     }
     
     // Render the drone (H-frame design)
@@ -310,6 +385,60 @@ void Renderer::renderCube(const glm::vec3& position, const glm::vec3& size, cons
     glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
     
     // Draw cube
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void Renderer::renderPyramid(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color) {
+    glBindVertexArray(cubeVAO_);
+    
+    // Set color uniform
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(color));
+    
+    // Create model matrix for pyramid (scaled cube that gets smaller at top)
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, size);
+    
+    // Set model uniform
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    
+    // Draw pyramid (using cube for now - could be enhanced with custom geometry)
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void Renderer::renderCylinder(const glm::vec3& position, float radius, float height, const glm::vec3& color) {
+    glBindVertexArray(cubeVAO_);
+    
+    // Set color uniform
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(color));
+    
+    // Create model matrix for cylinder (scaled cube)
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, glm::vec3(radius * 2.0f, height, radius * 2.0f));
+    
+    // Set model uniform
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    
+    // Draw cylinder (using cube for now - could be enhanced with custom geometry)
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void Renderer::renderSphere(const glm::vec3& position, float radius, const glm::vec3& color) {
+    glBindVertexArray(cubeVAO_);
+    
+    // Set color uniform
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(color));
+    
+    // Create model matrix for sphere (scaled cube)
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, glm::vec3(radius * 2.0f, radius * 2.0f, radius * 2.0f));
+    
+    // Set model uniform
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(model));
+    
+    // Draw sphere (using cube for now - could be enhanced with custom geometry)
     glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 

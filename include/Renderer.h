@@ -48,6 +48,9 @@ private:
     
     // Rendering helpers
     void renderCube(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color);
+    void renderPyramid(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color);
+    void renderCylinder(const glm::vec3& position, float radius, float height, const glm::vec3& color);
+    void renderSphere(const glm::vec3& position, float radius, const glm::vec3& color);
     void renderGround();
     void renderSkybox();
     
