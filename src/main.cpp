@@ -98,7 +98,7 @@ int main() {
         
         // Get current drone state
         DroneState drone_pos = drone.getPosition();
-        DroneState drone_orient = drone.getOrientationOnly();  // Get only orientation values
+        DroneState drone_orient = drone.getOrientation();  // Get complete state with position and orientation
         
         // Handle camera mode switching if requested
         if (input.shouldSwitchCameraMode()) {
@@ -128,18 +128,23 @@ int main() {
         CameraState camera_target = camera.getTarget();
         CameraState camera_up = camera.getUp();
         
-        glm::vec3 gl_camera_pos(camera_pos.x, camera_pos.y, camera_pos.z);
-        glm::vec3 gl_camera_target(camera_target.x, camera_target.y, camera_target.z);
-        glm::vec3 gl_camera_up(camera_up.x, camera_up.y, camera_up.z);
+        // Transform camera coordinates from our system (X=left/right, Y=forward/backward, Z=up/down)
+        // to OpenGL system (X=left/right, Y=up/down, Z=forward/backward)
+        glm::vec3 gl_camera_pos(camera_pos.x, camera_pos.z, camera_pos.y);
+        glm::vec3 gl_camera_target(camera_target.x, camera_target.z, camera_target.y);
+        glm::vec3 gl_camera_up(camera_up.x, camera_up.z, camera_up.y);
         
         renderer.render3DScene(gl_camera_pos, gl_camera_target, gl_camera_up, world.getObstacles());
         
         // Render the drone with H-frame design
-        glm::vec3 drone_position(drone_pos.x, drone_pos.y, drone_pos.z);
+        // Transform drone coordinates to match OpenGL system
+        glm::vec3 drone_position(drone_pos.x, drone_pos.z, drone_pos.y);
         glm::vec3 drone_orientation(drone_orient.roll, drone_orient.pitch, drone_orient.yaw);
         glm::vec3 drone_color(0.0f, 0.7f, 1.0f); // Bright blue color
         
-        renderer.renderHFrameDrone(drone_position, drone_orientation, drone_color);
+        // Check if we're in third-person mode
+        bool isThirdPerson = (camera.getMode() == CameraMode::THIRD_PERSON);
+        renderer.renderXFrameDrone(drone_position, drone_orientation, drone_color, isThirdPerson);
         
         // End frame and swap buffers
         renderer.endFrame();

@@ -88,10 +88,10 @@ void InputHandler::update(float delta_time) {
     
     // Check Q/E keys for yaw
     if (key_states_['q'] || key_states_['Q']) {
-        current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY;
+        current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY;
     }
     if (key_states_['e'] || key_states_['E']) {
-        current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY;
+        current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY;
     }
     
     // Check R/F keys for pitch

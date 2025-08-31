@@ -29,18 +29,25 @@ void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct
     // Calculate forward direction based on drone orientation
     // In this coordinate system: X=left/right, Y=forward/backward, Z=up/down
     // This must match the drone's coordinate system in Drone.cpp
+    // When yaw=0, drone faces forward (+Y direction)
+    // When yaw=π/2, drone faces right (+X direction)
+    // When yaw=-π/2, drone faces left (-X direction)
+    // Note: The rendering uses transformed coordinates (X=left/right, Y=up/down, Z=forward/backward)
+    // So we need to transform the forward direction to match
     float forward_x = sin(yaw) * cos(pitch);   // Right/left component (matches drone)
-    float forward_y = cos(yaw) * cos(pitch);   // Forward/backward component (matches drone)
-    float forward_z = sin(pitch);              // Up/down component (matches drone)
+    float forward_y = sin(pitch);              // Up/down component (transformed for rendering)
+    float forward_z = cos(yaw) * cos(pitch);   // Forward/backward component (transformed for rendering)
     
     // Position camera 2 units in front of the drone center, slightly elevated
+    // The drone's visual front is in the +Y direction, so position camera accordingly
     position_.x = drone_pos.x + forward_x * 2.0f;
     position_.y = drone_pos.y + forward_y * 2.0f;
     position_.z = drone_pos.z + forward_z * 2.0f + 0.5f;  // Move 0.5 units up from calculated position
     
     // Debug output to understand coordinate system
     std::cout << "Setting 1st person: Drone pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
-              << ") yaw:" << yaw << " | Camera pos(" << position_.x << ", " << position_.y << ", " << position_.z << ")" << std::endl;
+              << ") yaw:" << yaw << " | Forward dir(" << forward_x << ", " << forward_y << ", " << forward_z 
+              << ") | Camera pos(" << position_.x << ", " << position_.y << ", " << position_.z << ")" << std::endl;
     
     // Calculate up vector
     float up_x = 0.0f;
@@ -78,26 +85,23 @@ void Camera::setFirstPersonMode(const struct DroneState& drone_pos, const struct
 }
 
 void Camera::setThirdPersonMode(const struct DroneState& drone_pos, const struct DroneState& drone_orient) {
-    // Calculate camera position behind and above the drone, following its forward direction
-    float yaw = drone_orient.yaw;
+    // In third-person mode, the red dot stays fixed in the center of the screen
+    // The camera moves around the red dot, which represents the drone's position
     
     // Debug output to understand coordinate system
     std::cout << "Setting 3rd person: Drone pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
-              << ") yaw:" << yaw << " | Camera pos(" << drone_pos.x << ", " << (drone_pos.y - 100.0f) << ", " << (drone_pos.z + THIRD_PERSON_HEIGHT) << ")" << std::endl;
+              << ") yaw:" << drone_orient.yaw << " | Camera pos(" << drone_pos.x << ", " << (drone_pos.y - 100.0f) << ", " << (drone_pos.z + THIRD_PERSON_HEIGHT) << ")" << std::endl;
     
-    // Position camera behind drone, following its forward direction
-    // When drone faces forward (yaw = 0), camera should be behind (negative Y)
-    // When drone faces right (yaw = π/2), camera should be to the left (negative X)
-    // When drone faces left (yaw = -π/2), camera should be to the right (positive X)
-    float offset_x = -sin(yaw) * 100.0f;     // Left/right offset based on yaw
-    float offset_y = -cos(yaw) * 100.0f;     // Forward/backward offset based on yaw
-    float offset_z = THIRD_PERSON_HEIGHT;     // Above the drone
+    // Position camera behind and above the drone's position
+    float offset_x = 0.0f;                    // No left/right offset - camera stays centered
+    float offset_y = THIRD_PERSON_HEIGHT;     // Above the drone (Y is now up/down)
+    float offset_z = -100.0f;                 // Behind the drone (Z is now forward/backward)
     
     position_.x = drone_pos.x + offset_x;
     position_.y = drone_pos.y + offset_y;
     position_.z = drone_pos.z + offset_z;
     
-    // Look at drone
+    // Always look at the drone's position (where the red dot will be)
     target_.x = drone_pos.x;
     target_.y = drone_pos.y;
     target_.z = drone_pos.z;

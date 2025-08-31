@@ -29,7 +29,7 @@ public:
                       const glm::vec3& cameraUp, const std::vector<struct Obstacle>& obstacles);
     
     // Drone rendering
-    void renderHFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color);
+    void renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson = false);
     
     // Camera setup
     void setProjectionMatrix(float fov, float aspect, float near, float far);

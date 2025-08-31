@@ -138,7 +138,10 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
     for (const auto& obstacle : obstacles) {
         glm::vec3 color;
         glm::vec3 size;
-        glm::vec3 position(obstacle.x, obstacle.y, obstacle.z);
+        // Transform obstacle coordinates to match new coordinate system
+        // Original: X=left/right, Y=forward/backward, Z=up/down
+        // New: X=left/right, Y=up/down, Z=forward/backward
+        glm::vec3 position(obstacle.x, obstacle.z, obstacle.y);
         
         switch (obstacle.type) {
             case ObstacleType::SKYSCRAPER:
@@ -265,12 +268,14 @@ bool Renderer::setupBuffers() {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     
-    // Ground vertices
+    // Ground vertices - transformed to match new coordinate system
+    // Original: X=left/right, Y=forward/backward, Z=up/down
+    // New: X=left/right, Y=up/down, Z=forward/backward
     float groundVertices[] = {
-        -1000.0f, 0.0f, -1000.0f,
-         1000.0f, 0.0f, -1000.0f,
-         1000.0f, 0.0f,  1000.0f,
-        -1000.0f, 0.0f,  1000.0f
+        -1000.0f, 0.0f, -1000.0f,  // X=left, Y=ground level, Z=backward
+         1000.0f, 0.0f, -1000.0f,  // X=right, Y=ground level, Z=backward
+         1000.0f, 0.0f,  1000.0f,  // X=right, Y=ground level, Z=forward
+        -1000.0f, 0.0f,  1000.0f   // X=left, Y=ground level, Z=forward
     };
     
     glGenVertexArrays(1, &groundVAO_);
@@ -322,97 +327,39 @@ void Renderer::renderGround() {
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
-void Renderer::renderHFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color) {
-    // H-Frame drone consists of:
-    // 1. Main body (center cube)
-    // 2. Front arm (horizontal bar)
-    // 3. Back arm (horizontal bar)
-    // 4. Vertical support (connects arms)
+void Renderer::renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson) {
+    // Only render the red dot cube - no drone body
     
-    // Main body - small cube in center
-    glm::mat4 bodyModel = glm::mat4(1.0f);
-    bodyModel = glm::translate(bodyModel, position);
-    bodyModel = glm::rotate(bodyModel, orientation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Yaw
-    bodyModel = glm::rotate(bodyModel, orientation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Pitch
-    bodyModel = glm::rotate(bodyModel, orientation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Roll
-    bodyModel = glm::scale(bodyModel, glm::vec3(2.0f, 2.0f, 1.0f));
+    // Forward direction indicator - small red cube
+    // The red dot cube should be positioned so its back face points in the forward direction
+    // This means the front face (the one we see) is always visible
     
-    // Set color for main body (slightly darker)
-    glm::vec3 bodyColor = color * 0.8f;
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(bodyColor));
-    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(bodyModel));
-    
-    // Draw main body
-    glBindVertexArray(cubeVAO_);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    // Front arm - horizontal bar extending forward
-    glm::mat4 frontArmModel = glm::mat4(1.0f);
-    frontArmModel = glm::translate(frontArmModel, position);
-    frontArmModel = glm::rotate(frontArmModel, orientation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Yaw
-    frontArmModel = glm::rotate(frontArmModel, orientation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Pitch
-    frontArmModel = glm::rotate(frontArmModel, orientation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Roll
-    frontArmModel = glm::translate(frontArmModel, glm::vec3(0.0f, 8.0f, 0.0f)); // Move forward
-    frontArmModel = glm::scale(frontArmModel, glm::vec3(12.0f, 1.0f, 0.5f)); // Long, thin, flat
-    
-    // Set color for front arm (slightly lighter)
-    glm::vec3 frontArmColor = color * 1.2f;
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(frontArmColor));
-    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(frontArmModel));
-    
-    // Draw front arm
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    // Back arm - horizontal bar extending backward
-    glm::mat4 backArmModel = glm::mat4(1.0f);
-    backArmModel = glm::translate(backArmModel, position);
-    backArmModel = glm::rotate(backArmModel, orientation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Yaw
-    backArmModel = glm::rotate(backArmModel, orientation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Pitch
-    backArmModel = glm::rotate(backArmModel, orientation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Roll
-    backArmModel = glm::translate(backArmModel, glm::vec3(0.0f, -8.0f, 0.0f)); // Move backward
-    backArmModel = glm::scale(backArmModel, glm::vec3(12.0f, 1.0f, 0.5f)); // Long, thin, flat
-    
-    // Set color for back arm (same as front)
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(frontArmColor));
-    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(backArmModel));
-    
-    // Draw back arm
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    // Vertical support - connects the arms
-    glm::mat4 supportModel = glm::mat4(1.0f);
-    supportModel = glm::translate(supportModel, position);
-    supportModel = glm::rotate(supportModel, orientation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Yaw
-    supportModel = glm::rotate(supportModel, orientation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Pitch
-    supportModel = glm::rotate(supportModel, orientation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Roll
-    supportModel = glm::scale(supportModel, glm::vec3(0.5f, 0.5f, 16.0f)); // Thin, tall
-    
-    // Set color for support (darker)
-    glm::vec3 supportColor = color * 0.6f;
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(supportColor));
-    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(supportModel));
-    
-    // Draw vertical support
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    // Forward direction indicator - small red cube at front
-    // Position it relative to the drone's center in its local coordinate system
     glm::mat4 indicatorModel = glm::mat4(1.0f);
     indicatorModel = glm::translate(indicatorModel, position);
-    indicatorModel = glm::rotate(indicatorModel, orientation.z, glm::vec3(0.0f, 0.0f, 1.0f)); // Yaw
-    indicatorModel = glm::rotate(indicatorModel, orientation.y, glm::vec3(0.0f, 1.0f, 0.0f)); // Pitch
-    indicatorModel = glm::rotate(indicatorModel, orientation.x, glm::vec3(1.0f, 0.0f, 0.0f)); // Roll
     
-    // Place the red dot at the center of the front arm (12 units forward, centered)
-    // The drone's visual front is in Y direction, so position at (0, 12, 0) to match the arms
-    indicatorModel = glm::translate(indicatorModel, glm::vec3(0.0f, 12.0f, 0.0f));
-    indicatorModel = glm::scale(indicatorModel, glm::vec3(1.0f, 1.0f, 1.0f)); // Small cube
+    if (isThirdPerson) {
+        // In third-person mode, the red dot stays at the drone's position (center of screen)
+        // No offset - just render at the drone's position
+        indicatorModel = glm::scale(indicatorModel, glm::vec3(0.8f, 0.8f, 0.8f)); // Small cube
+    } else {
+        // In first-person mode, position the red dot cube so its back face points forward
+        // Calculate the forward direction based on drone's yaw orientation
+        float yaw = orientation.z;
+        float forward_x = sin(yaw);  // Left/right component
+        float forward_z = cos(yaw);  // Forward/backward component
+        
+        // Position the red dot cube so its back face points in the forward direction
+        // The cube is 0.8 units wide, so position it 0.4 units in front of the camera
+        // This ensures the front face is visible and back face points forward
+        indicatorModel = glm::translate(indicatorModel, glm::vec3(forward_x * 0.4f, 0.0f, forward_z * 0.4f));
+        indicatorModel = glm::scale(indicatorModel, glm::vec3(0.8f, 0.8f, 0.8f)); // Small cube
+    }
     
     // Set color for indicator (bright red)
     glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f)));
     glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(indicatorModel));
     
-    // Draw forward indicator
+    // Draw indicator
     glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 
