@@ -11,6 +11,14 @@
 std::map<int, bool> key_pressed;
 InputHandler* global_input_handler = nullptr;
 
+// Game state
+enum class GameState {
+    PLAYING,
+    CRASHED
+};
+
+GameState current_game_state = GameState::PLAYING;
+
 // Mouse callback for OpenGL
 void onMouse(GLFWwindow* window, double xpos, double ypos) {
     if (global_input_handler) {
@@ -100,14 +108,45 @@ int main() {
         DroneState drone_pos = drone.getPosition();
         DroneState drone_orient = drone.getOrientation();  // Get complete state with position and orientation
         
-        // Handle camera mode switching if requested
-        if (input.shouldSwitchCameraMode()) {
+        // Check for collisions if playing
+        if (current_game_state == GameState::PLAYING) {
+            // Check collision with buildings (using drone radius of 5.0f)
+            if (world.checkCollision(drone_pos.x, drone_pos.y, drone_pos.z, 5.0f)) {
+                current_game_state = GameState::CRASHED;
+                std::cout << "\n💥 CRASH! You hit a building!" << std::endl;
+                std::cout << "Press 'R' to restart or 'ESC' to exit" << std::endl;
+            }
+        }
+        
+        // Handle restart if crashed
+        if (current_game_state == GameState::CRASHED) {
+            if (key_pressed[GLFW_KEY_R]) {
+                // Reset game state
+                current_game_state = GameState::PLAYING;
+                
+                // Reset drone to starting position
+                drone = Drone(); // Create new drone with default position
+                
+                // Reset camera
+                camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
+                
+                // Clear any held keys to prevent immediate restart
+                key_pressed.clear();
+                
+                std::cout << "\n🔄 Restarting simulation..." << std::endl;
+            }
+        }
+        
+        // Handle camera mode switching if requested (only if playing)
+        if (current_game_state == GameState::PLAYING && input.shouldSwitchCameraMode()) {
             camera.switchMode(drone_pos, drone_orient);
             input.resetCameraSwitchFlag(); // Reset the flag after handling
         }
         
-        // Update camera with current drone state
-        camera.update(drone_pos, drone_orient);
+        // Update camera with current drone state (only if playing)
+        if (current_game_state == GameState::PLAYING) {
+            camera.update(drone_pos, drone_orient);
+        }
         
         // Handle pause
         if (input.isPauseRequested()) {
@@ -145,6 +184,11 @@ int main() {
         // Check if we're in third-person mode
         bool isThirdPerson = (camera.getMode() == CameraMode::THIRD_PERSON);
         renderer.renderXFrameDrone(drone_position, drone_orientation, drone_color, isThirdPerson);
+        
+        // Render crash message if crashed
+        if (current_game_state == GameState::CRASHED) {
+            renderer.renderCrashMessage();
+        }
         
         // End frame and swap buffers
         renderer.endFrame();

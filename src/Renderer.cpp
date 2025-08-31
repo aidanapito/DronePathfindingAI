@@ -505,6 +505,74 @@ void Renderer::renderSkybox() {
     // glClearColor(0.5f, 0.7f, 1.0f, 1.0f);
 }
 
+void Renderer::renderCrashMessage() {
+    // Simple crash message rendering using modern OpenGL
+    // This creates a red overlay with a simple message
+    
+    // Save current OpenGL state
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    
+    // Disable depth testing for overlay
+    glDisable(GL_DEPTH_TEST);
+    
+    // Set up orthographic projection for 2D overlay
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, width_, height_, 0, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Draw semi-transparent red background
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Red background for crash message
+    glColor4f(0.8f, 0.2f, 0.2f, 0.8f);
+    glBegin(GL_QUADS);
+    glVertex2f(width_ * 0.2f, height_ * 0.4f);
+    glVertex2f(width_ * 0.8f, height_ * 0.4f);
+    glVertex2f(width_ * 0.8f, height_ * 0.6f);
+    glVertex2f(width_ * 0.2f, height_ * 0.6f);
+    glEnd();
+    
+    // White border around the message area
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glLineWidth(3.0f);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(width_ * 0.2f, height_ * 0.4f);
+    glVertex2f(width_ * 0.8f, height_ * 0.4f);
+    glVertex2f(width_ * 0.8f, height_ * 0.6f);
+    glVertex2f(width_ * 0.2f, height_ * 0.6f);
+    glEnd();
+    
+    // Draw a simple "X" symbol in the center to represent crash
+    float centerX = width_ * 0.5f;
+    float centerY = height_ * 0.5f;
+    float size = 30.0f;
+    
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    glLineWidth(5.0f);
+    glBegin(GL_LINES);
+    
+    // Draw X symbol
+    glVertex2f(centerX - size, centerY - size);
+    glVertex2f(centerX + size, centerY + size);
+    glVertex2f(centerX + size, centerY - size);
+    glVertex2f(centerX - size, centerY + size);
+    
+    glEnd();
+    
+    // Restore OpenGL state
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glPopAttrib();
+}
+
 unsigned int Renderer::createShader(const std::string& vertexSource, const std::string& fragmentSource) {
     unsigned int vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
     unsigned int fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
