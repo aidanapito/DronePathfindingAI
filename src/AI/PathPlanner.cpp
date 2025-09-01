@@ -11,18 +11,25 @@ PathPlanner::PathPlanner()
 }
 
 std::vector<glm::vec3> PathPlanner::findPath(const glm::vec3& start, const glm::vec3& goal, const World& world) {
+    std::cout << "🔍 PathPlanner: Starting pathfinding from (" << start.x << ", " << start.y << ", " << start.z 
+              << ") to (" << goal.x << ", " << goal.y << ", " << goal.z << ")" << std::endl;
+    
     // First try direct line of sight
     if (isLineOfSight(start, goal, world)) {
+        std::cout << "✅ Direct line of sight found!" << std::endl;
         std::vector<glm::vec3> direct_path = {start, goal};
         return optimizePath(direct_path, world);
     }
     
+    std::cout << "🔄 No direct line of sight, using A* search..." << std::endl;
     // Use A* for complex paths
     std::vector<glm::vec3> raw_path = astarSearch(start, goal, world);
     if (raw_path.empty()) {
+        std::cout << "❌ A* search failed to find path" << std::endl;
         return raw_path;
     }
     
+    std::cout << "✅ A* found raw path with " << raw_path.size() << " points" << std::endl;
     // Optimize the path
     return optimizePath(raw_path, world);
 }

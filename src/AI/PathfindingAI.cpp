@@ -48,6 +48,10 @@ void PathfindingAI::setMode(AIMode mode) {
         // Clear path when switching modes
         if (mode != AIMode::FOLLOW_PATH) {
             clearPath();
+        } else {
+            // For FOLLOW_PATH mode, clear path and set to IDLE to trigger planning
+            clearPath();
+            current_state_ = AIState::IDLE;
         }
         
         std::cout << "AI Mode changed to: ";
@@ -110,35 +114,58 @@ DroneInput PathfindingAI::generateManualInput() {
 }
 
 DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_state, const World& world, float delta_time) {
-    // Update path if needed
-    if (current_state_ == AIState::PLANNING_PATH || current_path_.empty()) {
-        // Note: This will be called from update() where world is available
-        // For now, we'll handle path planning in the main update loop
+    // If we're planning or have no path, wait for path planning to complete
+    if (current_state_ == AIState::PLANNING_PATH || current_state_ == AIState::IDLE) {
+        std::cout << "⏳ Waiting for path planning to complete..." << std::endl;
+        return generateManualInput(); // Return neutral input while planning
     }
     
+    // If we have an error or no path after planning, try to replan
     if (current_path_.empty()) {
-        // If no path, try to move directly toward target
-        glm::vec3 drone_pos(current_state.x, current_state.y, current_state.z);
-        glm::vec3 to_target = target_position_ - drone_pos;
-        
-        // Project onto drone's forward direction
-        glm::vec3 drone_forward(cos(current_state.yaw), sin(current_state.yaw), 0.0f);
-        float forward_velocity = glm::dot(to_target, drone_forward);
-        
-        DroneInput input{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-        input.forward_thrust = glm::clamp(forward_velocity / MAX_VELOCITY, -1.0f, 1.0f);
-        input.vertical_thrust = glm::clamp(to_target.z / MAX_VELOCITY, -1.0f, 1.0f);
-        
-        // Yaw control
-        glm::vec3 target_direction = glm::normalize(to_target);
-        float target_yaw = atan2(target_direction.y, target_direction.x);
-        float yaw_error = target_yaw - current_state.yaw;
-        while (yaw_error > M_PI) yaw_error -= 2 * M_PI;
-        while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
-        
-        input.yaw_rate = glm::clamp(yaw_error * TURNING_RATE, -1.0f, 1.0f);
-        
-        return input;
+        if (current_state_ == AIState::ERROR) {
+            std::cout << "🔄 Path planning failed, attempting to replan..." << std::endl;
+            current_state_ = AIState::IDLE;
+            return generateManualInput();
+        } else {
+            std::cout << "⚠️  No path available, attempting direct movement" << std::endl;
+            // Fall back to direct movement only as last resort
+            glm::vec3 drone_pos(current_state.x, current_state.y, current_state.z);
+            glm::vec3 to_target = target_position_ - drone_pos;
+            
+            // Calculate distance to target
+            float distance_to_target = glm::length(to_target);
+            std::cout << "   Distance to target: " << distance_to_target << " units" << std::endl;
+            
+            // If we're very close to target, just hover
+            if (distance_to_target < 10.0f) {
+                std::cout << "   Very close to target, hovering..." << std::endl;
+                return generateManualInput(); // Hover in place
+            }
+            
+            // Project onto drone's forward direction
+            glm::vec3 drone_forward(cos(current_state.yaw), sin(current_state.yaw), 0.0f);
+            float forward_velocity = glm::dot(to_target, drone_forward);
+            
+            DroneInput input{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+            
+            // Limit forward thrust to prevent spiraling
+            input.forward_thrust = glm::clamp(forward_velocity / MAX_VELOCITY, -0.5f, 0.5f);
+            
+            // More conservative vertical movement
+            float vertical_diff = to_target.z;
+            input.vertical_thrust = glm::clamp(vertical_diff / MAX_VELOCITY, -0.3f, 0.3f);
+            
+            // Yaw control
+            glm::vec3 target_direction = glm::normalize(to_target);
+            float target_yaw = atan2(target_direction.y, target_direction.x);
+            float yaw_error = target_yaw - current_state.yaw;
+            while (yaw_error > M_PI) yaw_error -= 2 * M_PI;
+            while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
+            
+            input.yaw_rate = glm::clamp(yaw_error * TURNING_RATE, -0.5f, 0.5f);
+            
+            return input;
+        }
     }
     
     // Check if we've successfully landed on the target
@@ -317,6 +344,18 @@ void PathfindingAI::updatePath(const DroneState& current_state, const World& wor
     
     current_state_ = AIState::PLANNING_PATH;
     std::cout << "🛣️  Planning path to target..." << std::endl;
+    std::cout << "   Drone at: (" << current_state.x << ", " << current_state.y << ", " << current_state.z << ")" << std::endl;
+    std::cout << "   Target at: (" << target_position_.x << ", " << target_position_.y << ", " << target_position_.z << ")" << std::endl;
+    
+    // Check if target is reasonable
+    float distance_to_target = glm::length(target_position_ - glm::vec3(current_state.x, current_state.y, current_state.z));
+    std::cout << "   Distance to target: " << distance_to_target << " units" << std::endl;
+    
+    if (distance_to_target < 1.0f) {
+        std::cout << "   Target is very close, no path planning needed" << std::endl;
+        current_state_ = AIState::COMPLETED_MISSION;
+        return;
+    }
     
     glm::vec3 start(current_state.x, current_state.y, current_state.z);
     current_path_ = path_planner_->findPath(start, target_position_, world);

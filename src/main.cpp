@@ -69,7 +69,15 @@ int main() {
     input.setAIController(&ai_controller);
     ai_controller.setHomePosition(0.0f, 0.0f, 50.0f);
     
-    // Set target to the target building location
+    // Set up OpenGL callbacks
+    GLFWwindow* window = renderer.getWindow();
+    glfwSetCursorPosCallback(window, onMouse);
+    glfwSetKeyCallback(window, onKey);
+    
+    // Generate world
+    world.generateTerrain();
+    
+    // Set target to the target building location (AFTER world generation)
     const Obstacle* target_building = world.getTargetBuilding();
     if (target_building) {
         // Target is the top of the building
@@ -78,15 +86,9 @@ int main() {
         float target_z = target_building->z + target_building->height; // Top of building
         ai_controller.setTarget(target_x, target_y, target_z);
         std::cout << "🎯 AI target set to building top: (" << target_x << ", " << target_y << ", " << target_z << ")" << std::endl;
+    } else {
+        std::cout << "❌ Failed to find target building!" << std::endl;
     }
-    
-    // Set up OpenGL callbacks
-    GLFWwindow* window = renderer.getWindow();
-    glfwSetCursorPosCallback(window, onMouse);
-    glfwSetKeyCallback(window, onKey);
-    
-    // Generate world
-    world.generateTerrain();
     
     // Set initial camera mode
     camera.setFirstPersonMode(drone.getPosition(), drone.getOrientation());
