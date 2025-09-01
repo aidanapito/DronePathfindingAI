@@ -207,6 +207,8 @@ int main() {
         // Render the drone with H-frame design
         // Transform drone coordinates to match OpenGL system
         glm::vec3 drone_position(drone_pos.x, drone_pos.z, drone_pos.y);
+        // Transform drone orientation to match OpenGL coordinate system
+        // Roll stays the same, pitch and yaw need to be adjusted for coordinate system change
         glm::vec3 drone_orientation(drone_orient.roll, drone_orient.pitch, drone_orient.yaw);
         glm::vec3 drone_color(0.0f, 0.7f, 1.0f); // Bright blue color
         

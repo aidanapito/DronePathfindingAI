@@ -464,38 +464,28 @@ void Renderer::renderGround() {
 }
 
 void Renderer::renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson) {
-    // Only render the red dot cube - no drone body
+    // Render the drone with proper roll, pitch, and yaw rotations
     
-    // Forward direction indicator - small red cube
-    // The red dot cube should be positioned so its back face points in the forward direction
-    // This means the front face (the one we see) is always visible
+    glm::mat4 droneModel = glm::mat4(1.0f);
+    droneModel = glm::translate(droneModel, position);
     
-    glm::mat4 indicatorModel = glm::mat4(1.0f);
-    indicatorModel = glm::translate(indicatorModel, position);
+    // Apply rotations in the correct order: roll, pitch, yaw
+    // This ensures roll is applied in the drone's local coordinate system
+    // Roll (around Z-axis in OpenGL coordinate system)
+    droneModel = glm::rotate(droneModel, orientation.x, glm::vec3(0.0f, 0.0f, 1.0f));
+    // Pitch (around X-axis in OpenGL coordinate system)  
+    droneModel = glm::rotate(droneModel, orientation.y, glm::vec3(1.0f, 0.0f, 0.0f));
+    // Yaw (around Y-axis in OpenGL coordinate system)
+    droneModel = glm::rotate(droneModel, orientation.z, glm::vec3(0.0f, 1.0f, 0.0f));
     
-    if (isThirdPerson) {
-        // In third-person mode, the red dot stays at the drone's position (center of screen)
-        // No offset - just render at the drone's position
-        indicatorModel = glm::scale(indicatorModel, glm::vec3(0.8f, 0.8f, 0.8f)); // Small cube
-    } else {
-        // In first-person mode, position the red dot cube so its back face points forward
-        // Calculate the forward direction based on drone's yaw orientation
-        float yaw = orientation.z;
-        float forward_x = sin(yaw);  // Left/right component
-        float forward_z = cos(yaw);  // Forward/backward component
-        
-        // Position the red dot cube so its back face points in the forward direction
-        // The cube is 0.8 units wide, so position it 0.4 units in front of the camera
-        // This ensures the front face is visible and back face points forward
-        indicatorModel = glm::translate(indicatorModel, glm::vec3(forward_x * 0.4f, 0.0f, forward_z * 0.4f));
-        indicatorModel = glm::scale(indicatorModel, glm::vec3(0.8f, 0.8f, 0.8f)); // Small cube
-    }
+    // Scale the drone
+    droneModel = glm::scale(droneModel, glm::vec3(0.8f, 0.8f, 0.8f));
     
-    // Set color for indicator (bright red)
-    glUniform3fv(colorLoc_, 1, glm::value_ptr(glm::vec3(1.0f, 0.0f, 0.0f)));
-    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(indicatorModel));
+    // Set color for drone (bright blue)
+    glUniform3fv(colorLoc_, 1, glm::value_ptr(color));
+    glUniformMatrix4fv(modelLoc_, 1, GL_FALSE, glm::value_ptr(droneModel));
     
-    // Draw indicator
+    // Draw drone
     glDrawArrays(GL_TRIANGLES, 0, 36);
 }
 

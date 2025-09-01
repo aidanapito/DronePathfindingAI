@@ -19,7 +19,14 @@ void Drone::update(float delta_time, const DroneInput& input) {
     float forward_force = input.forward_thrust * ACCELERATION;
     float yaw_torque = input.yaw_rate * TURN_RATE;
     float pitch_torque = input.pitch_rate * TURN_RATE;
+    
+    // Adjust roll direction based on yaw orientation to maintain consistent roll behavior
+    // When facing south (yaw around 180°), invert the roll direction
     float roll_torque = input.roll_rate * TURN_RATE;
+    if (state_.yaw > M_PI && state_.yaw < 2*M_PI) {
+        roll_torque = -roll_torque; // Invert roll when facing south (180-360 degrees)
+    }
+    
     float vertical_force = input.vertical_thrust * ACCELERATION;
     
     // Update orientation
