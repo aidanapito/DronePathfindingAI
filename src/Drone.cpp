@@ -5,7 +5,7 @@
 Drone::Drone() {
     state_.x = 100.0f;
     state_.y = 100.0f;
-    state_.z = 150.0f;
+    state_.z = 15.0f;  // Start just above ground level (above MIN_ALTITUDE of 10.0f)
     state_.vx = 0.0f;
     state_.vy = 0.0f;
     state_.vz = 0.0f;
