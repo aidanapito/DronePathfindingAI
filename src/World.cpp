@@ -1,14 +1,16 @@
 #include "World.h"
 #include <cmath>
+#include <iostream>
 
 World::World(int width, int height, int depth) 
-    : width_(width), height_(height), depth_(depth) {
+    : width_(width), height_(height), depth_(depth), target_building_(nullptr) {
     rng_.seed(std::random_device{}());
 }
 
 void World::generateTerrain() {
     // Clear existing obstacles
     obstacles_.clear();
+    target_building_ = nullptr;
     
     // Create a city-like environment with dense skyscrapers
     // This creates streets between the buildings
@@ -47,6 +49,9 @@ void World::generateTerrain() {
     
     // Add a few wind turbines outside the city
     addWindTurbines(2);
+    
+    // Generate random target building
+    generateRandomTargetBuilding();
 }
 
 void World::addSkyscrapers(int count) {
@@ -362,4 +367,35 @@ bool World::checkCollision(float x, float y, float z, float radius) const {
 float World::getGroundHeight(float x, float y) const {
     // Simple ground height - could be enhanced with terrain generation
     return 0.0f;
+}
+
+void World::generateTargetBuilding(float x, float y) {
+    Obstacle target;
+    target.x = x;
+    target.y = y;
+    target.z = 30.0f;  // Target building center height above ground
+    target.radius = 25.0f;
+    target.height = 60.0f;
+    target.is_vertical = true;
+    target.type = ObstacleType::FACTORY; // Use factory type for green rendering
+    target.rotation = 0.0f;
+    target.width = 50.0f;   // Building width
+    target.depth = 50.0f;   // Building depth
+    obstacles_.push_back(target);
+    
+    // Store pointer to target building
+    target_building_ = &obstacles_.back();
+}
+
+void World::generateRandomTargetBuilding() {
+    // Generate target building at a random location within the city area
+    std::uniform_real_distribution<float> x_dist(200.0f, width_ - 200.0f);
+    std::uniform_real_distribution<float> y_dist(200.0f, height_ - 200.0f);
+    
+    float x = x_dist(rng_);
+    float y = y_dist(rng_);
+    
+    generateTargetBuilding(x, y);
+    
+    std::cout << "🎯 Target building generated at: (" << x << ", " << y << ", " << (30.0f + 60.0f) << ")" << std::endl;
 }

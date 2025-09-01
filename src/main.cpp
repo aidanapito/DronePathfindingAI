@@ -69,8 +69,16 @@ int main() {
     input.setAIController(&ai_controller);
     ai_controller.setHomePosition(0.0f, 0.0f, 50.0f);
     
-    // Set a default target for path following mode
-    ai_controller.setTarget(600.0f, 400.0f, 100.0f);
+    // Set target to the target building location
+    const Obstacle* target_building = world.getTargetBuilding();
+    if (target_building) {
+        // Target is the top of the building
+        float target_x = target_building->x;
+        float target_y = target_building->y;
+        float target_z = target_building->z + target_building->height; // Top of building
+        ai_controller.setTarget(target_x, target_y, target_z);
+        std::cout << "🎯 AI target set to building top: (" << target_x << ", " << target_y << ", " << target_z << ")" << std::endl;
+    }
     
     // Set up OpenGL callbacks
     GLFWwindow* window = renderer.getWindow();
@@ -96,6 +104,8 @@ int main() {
     std::cout << "🤖 AI Controls:" << std::endl;
     std::cout << "   T: Toggle AI Control" << std::endl;
     std::cout << "   1-5: AI Modes (Manual/Follow/Explore/Return/Avoid)" << std::endl;
+    std::cout << "   Note: Press 'T' first to enable AI, then press mode number" << std::endl;
+    std::cout << "   Mode 2 (Follow Path): Drone will plan and follow a path to the target building" << std::endl;
     
     // Game loop
     auto last_time = std::chrono::high_resolution_clock::now();
@@ -118,6 +128,13 @@ int main() {
         if (input.isAIControlEnabled()) {
             // Use AI control
             DroneState current_state = drone.getPosition();
+            
+            // Update path planning for FOLLOW_PATH mode
+            if (ai_controller.getMode() == AIMode::FOLLOW_PATH && 
+                (ai_controller.getState() == AIState::IDLE || ai_controller.getState() == AIState::PLANNING_PATH)) {
+                ai_controller.updatePath(current_state, world);
+            }
+            
             drone_input = ai_controller.update(delta_time, current_state, world);
         } else {
             // Use manual control
@@ -224,7 +241,7 @@ int main() {
         glm::vec3 gl_camera_target(camera_target.x, camera_target.z, camera_target.y);
         glm::vec3 gl_camera_up(camera_up.x, camera_up.z, camera_up.y);
         
-        renderer.render3DScene(gl_camera_pos, gl_camera_target, gl_camera_up, world.getObstacles());
+        renderer.render3DScene(gl_camera_pos, gl_camera_target, gl_camera_up, world.getObstacles(), world.getTargetBuilding());
         
         // Render the drone with H-frame design
         // Transform drone coordinates to match OpenGL system
@@ -259,6 +276,24 @@ int main() {
         
         if (input.isAIControlEnabled()) {
             std::cout << " | AI:" << static_cast<int>(ai_controller.getMode()) << " State:" << static_cast<int>(ai_controller.getState());
+            glm::vec3 target = ai_controller.getCurrentTarget();
+            std::cout << " Target:(" << target.x << "," << target.y << "," << target.z << ")";
+            
+            // Show path information for FOLLOW_PATH mode
+            if (ai_controller.getMode() == AIMode::FOLLOW_PATH) {
+                const auto& path = ai_controller.getCurrentPath();
+                if (!path.empty()) {
+                    std::cout << " Path:" << path.size() << "pts";
+                    if (ai_controller.getState() == AIState::FOLLOWING_PATH) {
+                        std::cout << " WP:" << ai_controller.getCurrentWaypointIndex() << "/" << path.size();
+                    }
+                }
+            }
+            
+            // Check if drone has landed on target
+            if (ai_controller.hasLandedOnTarget(drone_pos, world)) {
+                std::cout << " 🎯 LANDED ON TARGET!";
+            }
         }
         
         std::cout << "    " << std::flush;

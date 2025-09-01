@@ -23,7 +23,7 @@ DroneInput PathfindingAI::update(float delta_time, const DroneState& current_sta
             return generateManualInput();
             
         case AIMode::FOLLOW_PATH:
-            return generatePathFollowingInput(current_state, delta_time);
+            return generatePathFollowingInput(current_state, world, delta_time);
             
         case AIMode::EXPLORE:
             return generateExplorationInput(current_state, world, delta_time);
@@ -109,7 +109,7 @@ DroneInput PathfindingAI::generateManualInput() {
     return DroneInput{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 }
 
-DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_state, float delta_time) {
+DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_state, const World& world, float delta_time) {
     // Update path if needed
     if (current_state_ == AIState::PLANNING_PATH || current_path_.empty()) {
         // Note: This will be called from update() where world is available
@@ -139,6 +139,13 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
         input.yaw_rate = glm::clamp(yaw_error * TURNING_RATE, -1.0f, 1.0f);
         
         return input;
+    }
+    
+    // Check if we've successfully landed on the target
+    if (hasLandedOnTarget(current_state, world)) {
+        current_state_ = AIState::COMPLETED_MISSION;
+        std::cout << "🎉 SUCCESS! Drone has landed on the target building!" << std::endl;
+        return generateManualInput();
     }
     
     // Get current waypoint
@@ -309,6 +316,7 @@ void PathfindingAI::updatePath(const DroneState& current_state, const World& wor
     }
     
     current_state_ = AIState::PLANNING_PATH;
+    std::cout << "🛣️  Planning path to target..." << std::endl;
     
     glm::vec3 start(current_state.x, current_state.y, current_state.z);
     current_path_ = path_planner_->findPath(start, target_position_, world);
@@ -316,10 +324,15 @@ void PathfindingAI::updatePath(const DroneState& current_state, const World& wor
     if (!current_path_.empty()) {
         current_state_ = AIState::FOLLOWING_PATH;
         current_waypoint_index_ = 0;
-        std::cout << "Path planned with " << current_path_.size() << " waypoints" << std::endl;
+        std::cout << "✅ Path planned with " << current_path_.size() << " waypoints" << std::endl;
+        
+        // Debug: print first few waypoints
+        for (size_t i = 0; i < std::min(current_path_.size(), size_t(3)); ++i) {
+            std::cout << "   Waypoint " << i << ": (" << current_path_[i].x << ", " << current_path_[i].y << ", " << current_path_[i].z << ")" << std::endl;
+        }
     } else {
         current_state_ = AIState::ERROR;
-        std::cout << "Failed to plan path to target" << std::endl;
+        std::cout << "❌ Failed to plan path to target" << std::endl;
     }
 }
 
@@ -332,8 +345,13 @@ bool PathfindingAI::isWaypointReached(const DroneState& current_state, const glm
 void PathfindingAI::advanceToNextWaypoint() {
     current_waypoint_index_++;
     if (current_waypoint_index_ < current_path_.size()) {
-        std::cout << "Reached waypoint " << (current_waypoint_index_ - 1) 
-                  << ", moving to waypoint " << current_waypoint_index_ << std::endl;
+        std::cout << "🎯 Reached waypoint " << (current_waypoint_index_ - 1) 
+                  << ", moving to waypoint " << current_waypoint_index_ 
+                  << " at (" << current_path_[current_waypoint_index_].x 
+                  << ", " << current_path_[current_waypoint_index_].y 
+                  << ", " << current_path_[current_waypoint_index_].z << ")" << std::endl;
+    } else {
+        std::cout << "🎯 Reached final waypoint, mission complete!" << std::endl;
     }
 }
 
@@ -345,4 +363,39 @@ glm::vec3 PathfindingAI::calculateDesiredVelocity(const DroneState& current_stat
     // Scale velocity based on distance and aggressiveness
     float speed = glm::min(distance * pathfinding_aggressiveness_, MAX_VELOCITY);
     return direction * speed;
+}
+
+bool PathfindingAI::hasLandedOnTarget(const DroneState& current_state, const World& world) const {
+    const Obstacle* target_building = world.getTargetBuilding();
+    if (!target_building) {
+        return false;
+    }
+    
+    // Check if drone is on top of the target building
+    float drone_x = current_state.x;
+    float drone_y = current_state.y;
+    float drone_z = current_state.z;
+    
+    float building_x = target_building->x;
+    float building_y = target_building->y;
+    float building_top_z = target_building->z + target_building->height;
+    
+    // Check horizontal distance (within building radius)
+    float horizontal_distance = sqrt((drone_x - building_x) * (drone_x - building_x) + 
+                                   (drone_y - building_y) * (drone_y - building_y));
+    
+    // Check vertical distance (close to building top)
+    float vertical_distance = abs(drone_z - building_top_z);
+    
+    // Drone is considered landed if:
+    // 1. Within building radius horizontally
+    // 2. Close to building top vertically (within 5 units)
+    // 3. Moving slowly (velocity < 5 units)
+    float velocity = sqrt(current_state.vx * current_state.vx + 
+                         current_state.vy * current_state.vy + 
+                         current_state.vz * current_state.vz);
+    
+    return horizontal_distance <= target_building->radius && 
+           vertical_distance <= 5.0f && 
+           velocity < 5.0f;
 }

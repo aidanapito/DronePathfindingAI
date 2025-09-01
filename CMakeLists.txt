@@ -49,3 +49,6 @@ target_link_libraries(drone_sim
 
 # Set C++ standard
 target_compile_features(drone_sim PRIVATE cxx_std_17)
+
+# Add compiler flags to silence OpenGL deprecation warnings
+target_compile_definitions(drone_sim PRIVATE GL_SILENCE_DEPRECATION)

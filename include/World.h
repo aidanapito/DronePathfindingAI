@@ -55,6 +55,10 @@ public:
     int getDepth() const { return depth_; }
     const std::vector<Obstacle>& getObstacles() const { return obstacles_; }
     
+    // Target building info
+    Obstacle* getTargetBuilding() { return target_building_; }
+    const Obstacle* getTargetBuilding() const { return target_building_; }
+    
     // Collision detection
     bool checkCollision(float x, float y, float z, float radius) const;
     float getGroundHeight(float x, float y) const;
@@ -63,6 +67,7 @@ private:
     int width_, height_, depth_;
     std::vector<Obstacle> obstacles_;
     std::mt19937 rng_;
+    Obstacle* target_building_; // Pointer to the target building
     
     // Terrain generation helpers
     void generateSkyscraper(float x, float y);
@@ -79,4 +84,6 @@ private:
     void generateWaterTower(float x, float y);
     void generateFactory(float x, float y, float rotation);
     void generateLandmark(float x, float y, int landmarkType);
+    void generateTargetBuilding(float x, float y);
+    void generateRandomTargetBuilding();
 };

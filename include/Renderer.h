@@ -26,7 +26,8 @@ public:
     
     // 3D rendering
     void render3DScene(const glm::vec3& cameraPos, const glm::vec3& cameraTarget, 
-                      const glm::vec3& cameraUp, const std::vector<struct Obstacle>& obstacles);
+                      const glm::vec3& cameraUp, const std::vector<struct Obstacle>& obstacles,
+                      const struct Obstacle* targetBuilding = nullptr);
     
     // Drone rendering
     void renderXFrameDrone(const glm::vec3& position, const glm::vec3& orientation, const glm::vec3& color, bool isThirdPerson = false);

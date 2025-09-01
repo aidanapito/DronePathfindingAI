@@ -49,10 +49,15 @@ public:
     bool isPathValid() const;
     bool isTargetReached() const;
     float getDistanceToTarget() const;
+    bool hasLandedOnTarget(const DroneState& current_state, const World& world) const;
+    
+    // Path planning
+    void updatePath(const DroneState& current_state, const World& world);
     
     // Debug information
     const std::vector<glm::vec3>& getCurrentPath() const;
     glm::vec3 getCurrentTarget() const;
+    size_t getCurrentWaypointIndex() const { return current_waypoint_index_; }
 
 private:
     // AI components
@@ -77,12 +82,11 @@ private:
     
     // Internal methods
     DroneInput generateManualInput();
-    DroneInput generatePathFollowingInput(const DroneState& current_state, float delta_time);
+    DroneInput generatePathFollowingInput(const DroneState& current_state, const World& world, float delta_time);
     DroneInput generateObstacleAvoidanceInput(const DroneState& current_state, const World& world, float delta_time);
     DroneInput generateExplorationInput(const DroneState& current_state, const World& world, float delta_time);
     DroneInput generateReturnHomeInput(const DroneState& current_state, float delta_time);
     
-    void updatePath(const DroneState& current_state, const World& world);
     bool isWaypointReached(const DroneState& current_state, const glm::vec3& waypoint) const;
     void advanceToNextWaypoint();
     glm::vec3 calculateDesiredVelocity(const DroneState& current_state, const glm::vec3& target) const;

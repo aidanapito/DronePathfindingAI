@@ -118,7 +118,8 @@ void Renderer::setViewMatrix(const glm::vec3& position, const glm::vec3& target,
 }
 
 void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& cameraTarget, 
-                           const glm::vec3& cameraUp, const std::vector<struct Obstacle>& obstacles) {
+                            const glm::vec3& cameraUp, const std::vector<struct Obstacle>& obstacles,
+                            const struct Obstacle* targetBuilding) {
     // Set view matrix
     setViewMatrix(cameraPos, cameraTarget, cameraUp);
     
@@ -202,7 +203,14 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
                 size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
                 break;
             case ObstacleType::FACTORY:
-                color = glm::vec3(0.5f, 0.3f, 0.1f); // Brown/industrial
+                // Check if this is the target building (green) or regular factory (brown)
+                if (targetBuilding && 
+                    obstacle.x == targetBuilding->x && 
+                    obstacle.y == targetBuilding->y) {
+                    color = glm::vec3(0.0f, 1.0f, 0.0f); // Bright green for target
+                } else {
+                    color = glm::vec3(0.5f, 0.3f, 0.1f); // Brown/industrial
+                }
                 size = glm::vec3(obstacle.width, obstacle.height, obstacle.depth);
                 break;
             default:
