@@ -1,4 +1,5 @@
 #include "InputHandler.h"
+#include "AI/PathfindingAI.h"
 #include <iostream>
 #include <algorithm>
 
@@ -12,6 +13,8 @@ InputHandler::InputHandler() {
     orbit_angle_y_ = 0.0f;
     zoom_distance_ = 100.0f;
     camera_ = nullptr;
+    ai_control_enabled_ = false;
+    ai_controller_ = nullptr;
 }
 
 void InputHandler::processKey(int key, bool pressed) {
@@ -30,6 +33,25 @@ void InputHandler::processKey(int key, bool pressed) {
                 break;
             case 'p': case 'P':
                 pause_requested_ = true;
+                break;
+            case '1': // AI Mode 1: Manual
+                setAIMode(0);
+                break;
+            case '2': // AI Mode 2: Follow Path
+                setAIMode(1);
+                break;
+            case '3': // AI Mode 3: Explore
+                setAIMode(2);
+                break;
+            case '4': // AI Mode 4: Return Home
+                setAIMode(3);
+                break;
+            case '5': // AI Mode 5: Avoid Obstacles
+                setAIMode(4);
+                break;
+            case 't': case 'T': // Toggle AI control
+                setAIControl(!ai_control_enabled_);
+                std::cout << "AI Control " << (ai_control_enabled_ ? "ENABLED" : "DISABLED") << std::endl;
                 break;
         }
     }
@@ -131,4 +153,23 @@ void InputHandler::resetView() {
     orbit_angle_x_ = 0.0f;
     orbit_angle_y_ = 0.0f;
     zoom_distance_ = 100.0f;
+}
+
+void InputHandler::setAITarget(float x, float y, float z) {
+    if (ai_controller_) {
+        ai_controller_->setTarget(x, y, z);
+        std::cout << "AI Target set to: (" << x << ", " << y << ", " << z << ")" << std::endl;
+    }
+}
+
+void InputHandler::setAIMode(int mode) {
+    if (ai_controller_) {
+        switch (mode) {
+            case 0: ai_controller_->setMode(AIMode::MANUAL); break;
+            case 1: ai_controller_->setMode(AIMode::FOLLOW_PATH); break;
+            case 2: ai_controller_->setMode(AIMode::EXPLORE); break;
+            case 3: ai_controller_->setMode(AIMode::RETURN_HOME); break;
+            case 4: ai_controller_->setMode(AIMode::AVOID_OBSTACLES); break;
+        }
+    }
 }

@@ -29,6 +29,9 @@ set(SOURCES
     src/Camera.cpp
     src/InputHandler.cpp
     src/Renderer.cpp
+    src/AI/PathfindingAI.cpp
+    src/AI/PathPlanner.cpp
+    src/AI/ObstacleAvoidance.cpp
 )
 
 # Create executable

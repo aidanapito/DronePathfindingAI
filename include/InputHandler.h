@@ -18,8 +18,17 @@ public:
     // Camera setup
     void setCamera(Camera* camera) { camera_ = camera; }
     
+    // AI setup
+    void setAIController(class PathfindingAI* ai) { ai_controller_ = ai; }
+    
     // Getters
     DroneInput getCurrentInput() const { return current_input_; }
+    
+    // AI control
+    void setAIControl(bool enabled) { ai_control_enabled_ = enabled; }
+    bool isAIControlEnabled() const { return ai_control_enabled_; }
+    void setAITarget(float x, float y, float z);
+    void setAIMode(int mode);
     
     // State queries
     bool isExitRequested() const { return exit_requested_; }
@@ -52,6 +61,10 @@ private:
     
     // Key state tracking
     std::unordered_map<int, bool> key_states_;
+    
+    // AI control
+    bool ai_control_enabled_;
+    class PathfindingAI* ai_controller_;
     
     // Camera state
     float orbit_angle_x_;

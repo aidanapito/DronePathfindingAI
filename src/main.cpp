@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "InputHandler.h"
 #include "Renderer.h"
+#include "AI/PathfindingAI.h"
 #include <iostream>
 #include <map>
 #include <chrono>
@@ -56,12 +57,20 @@ int main() {
     Drone drone;
     Camera camera;
     InputHandler input;
+    PathfindingAI ai_controller;
     
     // Set global input handler for callbacks
     global_input_handler = &input;
     
     // Set camera reference in input handler for immediate mode switching
     input.setCamera(&camera);
+    
+    // Set up AI controller
+    input.setAIController(&ai_controller);
+    ai_controller.setHomePosition(0.0f, 0.0f, 50.0f);
+    
+    // Set a default target for path following mode
+    ai_controller.setTarget(600.0f, 400.0f, 100.0f);
     
     // Set up OpenGL callbacks
     GLFWwindow* window = renderer.getWindow();
@@ -84,6 +93,9 @@ int main() {
     std::cout << "   Mouse: Look around (1st person) / Orbit (3rd person)" << std::endl;
     std::cout << "   Space: Switch camera mode" << std::endl;
     std::cout << "   ESC: Exit" << std::endl;
+    std::cout << "🤖 AI Controls:" << std::endl;
+    std::cout << "   T: Toggle AI Control" << std::endl;
+    std::cout << "   1-5: AI Modes (Manual/Follow/Explore/Return/Avoid)" << std::endl;
     
     // Game loop
     auto last_time = std::chrono::high_resolution_clock::now();
@@ -101,8 +113,18 @@ int main() {
         // Update input handler to calculate current input values
         input.update(delta_time);
         
+        // Get drone input (manual or AI)
+        DroneInput drone_input;
+        if (input.isAIControlEnabled()) {
+            // Use AI control
+            DroneState current_state = drone.getPosition();
+            drone_input = ai_controller.update(delta_time, current_state, world);
+        } else {
+            // Use manual control
+            drone_input = input.getCurrentInput();
+        }
+        
         // Update drone physics
-        DroneInput drone_input = input.getCurrentInput();
         drone.update(delta_time, drone_input);
         
         // Get current drone state
@@ -233,7 +255,13 @@ int main() {
         std::cout << "\rDrone: pos(" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z 
                   << ") roll:" << drone_orient.roll << " pitch:" << drone_orient.pitch << " yaw:" << drone_orient.yaw 
                   << " | Input - T:" << drone_input.forward_thrust << " Y:" << drone_input.yaw_rate << " P:" << drone_input.pitch_rate 
-                  << " R:" << drone_input.roll_rate << " V:" << drone_input.vertical_thrust << "    " << std::flush;
+                  << " R:" << drone_input.roll_rate << " V:" << drone_input.vertical_thrust;
+        
+        if (input.isAIControlEnabled()) {
+            std::cout << " | AI:" << static_cast<int>(ai_controller.getMode()) << " State:" << static_cast<int>(ai_controller.getState());
+        }
+        
+        std::cout << "    " << std::flush;
     }
     
     std::cout << "\n👋 Simulation ended. Goodbye!" << std::endl;
