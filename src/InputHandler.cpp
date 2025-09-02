@@ -18,11 +18,12 @@ InputHandler::InputHandler() {
 }
 
 void InputHandler::processKey(int key, bool pressed) {
-    // Update key state
+    // Update key state with edge detection
+    bool was_pressed = key_states_[key];
     key_states_[key] = pressed;
     
     // Handle immediate actions that don't depend on continuous input
-    if (pressed) {
+    if (pressed && !was_pressed) { // trigger only on rising edge
         switch (key) {
             case ' ': // Spacebar - immediate camera mode switch
                 should_switch_camera_mode_ = true;

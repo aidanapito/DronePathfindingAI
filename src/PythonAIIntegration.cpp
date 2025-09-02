@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <sstream>
 #include <iomanip>
+#include <optional> // Added for std::optional
 
 PythonAIIntegration::PythonAIIntegration(const std::string& data_dir) 
     : data_dir_(data_dir), python_ai_enabled_(false), current_mode_(AIMode::MANUAL) {
@@ -160,60 +161,33 @@ DroneInput PythonAIIntegration::parseAIInput(const std::string& json_data) {
     
     // More robust JSON parsing
     try {
-        // Find and parse forward_thrust
-        size_t pos = json_data.find("\"forward_thrust\":");
-        if (pos != std::string::npos) {
-            pos += 16; // Skip "forward_thrust":
-            size_t end = json_data.find_first_of(",}", pos);
-            if (end != std::string::npos) {
-                std::string value_str = json_data.substr(pos, end - pos);
-                input.forward_thrust = std::stof(value_str);
+        auto parseNumberAfter = [&](const std::string& key) -> std::optional<float> {
+            size_t pos = json_data.find(key);
+            if (pos == std::string::npos) return std::nullopt;
+            pos += key.size();
+            // Skip to first numeric char
+            const std::string digits = "-+0123456789.";
+            pos = json_data.find_first_of(digits, pos);
+            if (pos == std::string::npos) return std::nullopt;
+            // Read until non number char
+            size_t end = pos;
+            while (end < json_data.size()) {
+                char c = json_data[end];
+                if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E') {
+                    end++;
+                } else {
+                    break;
+                }
             }
-        }
-        
-        // Find and parse yaw_rate
-        pos = json_data.find("\"yaw_rate\":");
-        if (pos != std::string::npos) {
-            pos += 11; // Skip "yaw_rate":
-            size_t end = json_data.find_first_of(",}", pos);
-            if (end != std::string::npos) {
-                std::string value_str = json_data.substr(pos, end - pos);
-                input.yaw_rate = std::stof(value_str);
-            }
-        }
-        
-        // Find and parse pitch_rate
-        pos = json_data.find("\"pitch_rate\":");
-        if (pos != std::string::npos) {
-            pos += 13; // Skip "pitch_rate":
-            size_t end = json_data.find_first_of(",}", pos);
-            if (end != std::string::npos) {
-                std::string value_str = json_data.substr(pos, end - pos);
-                input.pitch_rate = std::stof(value_str);
-            }
-        }
-        
-        // Find and parse roll_rate
-        pos = json_data.find("\"roll_rate\":");
-        if (pos != std::string::npos) {
-            pos += 12; // Skip "roll_rate":
-            size_t end = json_data.find_first_of(",}", pos);
-            if (end != std::string::npos) {
-                std::string value_str = json_data.substr(pos, end - pos);
-                input.roll_rate = std::stof(value_str);
-            }
-        }
-        
-        // Find and parse vertical_thrust
-        pos = json_data.find("\"vertical_thrust\":");
-        if (pos != std::string::npos) {
-            pos += 18; // Skip "vertical_thrust":
-            size_t end = json_data.find_first_of(",}", pos);
-            if (end != std::string::npos) {
-                std::string value_str = json_data.substr(pos, end - pos);
-                input.vertical_thrust = std::stof(value_str);
-            }
-        }
+            std::string value_str = json_data.substr(pos, end - pos);
+            return std::stof(value_str);
+        };
+
+        if (auto v = parseNumberAfter("\"forward_thrust\":")) input.forward_thrust = *v;
+        if (auto v = parseNumberAfter("\"yaw_rate\":")) input.yaw_rate = *v;
+        if (auto v = parseNumberAfter("\"pitch_rate\":")) input.pitch_rate = *v;
+        if (auto v = parseNumberAfter("\"roll_rate\":")) input.roll_rate = *v;
+        if (auto v = parseNumberAfter("\"vertical_thrust\":")) input.vertical_thrust = *v;
         
         std::cout << "✅ Parsed AI input: F:" << input.forward_thrust 
                   << " Y:" << input.yaw_rate 

@@ -1,7 +1,7 @@
 {
-  "forward_thrust": 1.0,
-  "yaw_rate": -1.0,
+  "forward_thrust": 0.0015497914683174866,
+  "yaw_rate": -1.240701820925949e-05,
   "pitch_rate": 0.0,
   "roll_rate": 0.0,
-  "vertical_thrust": 0.5
+  "vertical_thrust": 0.007315979999999911
 }
