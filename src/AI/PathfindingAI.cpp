@@ -71,6 +71,8 @@ void PathfindingAI::setTarget(float x, float y, float z) {
     current_waypoint_index_ = 0;
     clearPath();
     
+    std::cout << "🎯 Target set to: (" << x << ", " << y << ", " << z << ")" << std::endl;
+    
     if (current_mode_ == AIMode::FOLLOW_PATH) {
         current_state_ = AIState::PLANNING_PATH;
     }
@@ -135,6 +137,9 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
             // Calculate distance to target
             float distance_to_target = glm::length(to_target);
             std::cout << "   Distance to target: " << distance_to_target << " units" << std::endl;
+            std::cout << "   Target position: (" << target_position_.x << ", " << target_position_.y << ", " << target_position_.z << ")" << std::endl;
+            std::cout << "   Drone position: (" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ")" << std::endl;
+            std::cout << "   Direction vector: (" << to_target.x << ", " << to_target.y << ", " << to_target.z << ")" << std::endl;
             
             // If we're very close to target, just hover
             if (distance_to_target < 10.0f) {
@@ -143,8 +148,10 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
             }
             
             // Project onto drone's forward direction
-            glm::vec3 drone_forward(cos(current_state.yaw), sin(current_state.yaw), 0.0f);
+            glm::vec3 drone_forward(sin(current_state.yaw), cos(current_state.yaw), 0.0f);
             float forward_velocity = glm::dot(to_target, drone_forward);
+            std::cout << "   Drone forward: (" << drone_forward.x << ", " << drone_forward.y << ", " << drone_forward.z << ")" << std::endl;
+            std::cout << "   Forward velocity: " << forward_velocity << std::endl;
             
             DroneInput input{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
             
@@ -163,6 +170,8 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
             while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
             
             input.yaw_rate = glm::clamp(yaw_error * TURNING_RATE, -0.5f, 0.5f);
+            
+            std::cout << "   Input - F:" << input.forward_thrust << " Y:" << input.yaw_rate << " V:" << input.vertical_thrust << std::endl;
             
             return input;
         }
@@ -203,9 +212,17 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
     glm::vec3 drone_pos(current_state.x, current_state.y, current_state.z);
     glm::vec3 to_waypoint = current_waypoint - drone_pos;
     
+    std::cout << "🎯 Waypoint following:" << std::endl;
+    std::cout << "   Drone pos: (" << drone_pos.x << ", " << drone_pos.y << ", " << drone_pos.z << ")" << std::endl;
+    std::cout << "   Waypoint: (" << current_waypoint.x << ", " << current_waypoint.y << ", " << current_waypoint.z << ")" << std::endl;
+    std::cout << "   To waypoint: (" << to_waypoint.x << ", " << to_waypoint.y << ", " << to_waypoint.z << ")" << std::endl;
+    
     // Project the desired direction onto the drone's forward direction
-    glm::vec3 drone_forward(cos(current_state.yaw), sin(current_state.yaw), 0.0f);
+    glm::vec3 drone_forward(sin(current_state.yaw), cos(current_state.yaw), 0.0f);
     float forward_velocity = glm::dot(to_waypoint, drone_forward);
+    std::cout << "   Drone yaw: " << current_state.yaw << " radians (" << (current_state.yaw * 180.0f / M_PI) << " degrees)" << std::endl;
+    std::cout << "   Drone forward: (" << drone_forward.x << ", " << drone_forward.y << ", " << drone_forward.z << ")" << std::endl;
+    std::cout << "   Forward velocity: " << forward_velocity << std::endl;
     input.forward_thrust = glm::clamp(forward_velocity / MAX_VELOCITY, -1.0f, 1.0f);
     
     // Vertical thrust based on desired vertical velocity
@@ -213,7 +230,7 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
     input.vertical_thrust = glm::clamp(vertical_velocity / MAX_VELOCITY, -1.0f, 1.0f);
     
     // Yaw control to face the waypoint
-    glm::vec3 current_direction(cos(current_state.yaw), sin(current_state.yaw), 0.0f);
+    glm::vec3 current_direction(sin(current_state.yaw), cos(current_state.yaw), 0.0f);
     glm::vec3 target_direction = glm::normalize(glm::vec3(current_waypoint.x - current_state.x, 
                                                          current_waypoint.y - current_state.y, 0.0f));
     
@@ -230,6 +247,8 @@ DroneInput PathfindingAI::generatePathFollowingInput(const DroneState& current_s
     // Pitch control for vertical movement
     float pitch_error = atan2(desired_velocity.z, sqrt(desired_velocity.x * desired_velocity.x + desired_velocity.y * desired_velocity.y));
     input.pitch_rate = glm::clamp(pitch_error * TURNING_RATE, -1.0f, 1.0f);
+    
+    std::cout << "   Final input - F:" << input.forward_thrust << " Y:" << input.yaw_rate << " P:" << input.pitch_rate << " V:" << input.vertical_thrust << std::endl;
     
     return input;
 }

@@ -32,6 +32,7 @@ set(SOURCES
     src/AI/PathfindingAI.cpp
     src/AI/PathPlanner.cpp
     src/AI/ObstacleAvoidance.cpp
+    src/PythonAIIntegration.cpp
 )
 
 # Create executable

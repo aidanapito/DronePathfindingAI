@@ -4,6 +4,7 @@
 #include "InputHandler.h"
 #include "Renderer.h"
 #include "AI/PathfindingAI.h"
+#include "PythonAIIntegration.h"
 #include <iostream>
 #include <map>
 #include <chrono>
@@ -58,6 +59,10 @@ int main() {
     Camera camera;
     InputHandler input;
     PathfindingAI ai_controller;
+    
+    // Initialize Python AI integration
+    PythonAIIntegration python_ai("../python_ai/ai_data");
+    python_ai.enablePythonAI(true); // Enable Python AI
     
     // Set global input handler for callbacks
     global_input_handler = &input;
@@ -131,13 +136,49 @@ int main() {
             // Use AI control
             DroneState current_state = drone.getPosition();
             
-            // Update path planning for FOLLOW_PATH mode
-            if (ai_controller.getMode() == AIMode::FOLLOW_PATH && 
-                (ai_controller.getState() == AIState::IDLE || ai_controller.getState() == AIState::PLANNING_PATH)) {
-                ai_controller.updatePath(current_state, world);
+            // Write data to Python AI
+            python_ai.writeDroneState(current_state);
+            python_ai.writeObstacles(world.getObstacles());
+            
+            // Send current AI mode and target to Python (AFTER input processing)
+            std::cout << "🔍 Current AI mode: " << static_cast<int>(ai_controller.getMode()) << std::endl;
+            if (ai_controller.getMode() == AIMode::FOLLOW_PATH) {
+                const Obstacle* target_building = world.getTargetBuilding();
+                if (target_building) {
+                    glm::vec3 target(target_building->x, target_building->y, target_building->z + target_building->height);
+                    python_ai.writeCommand(AIMode::FOLLOW_PATH, target);
+                    std::cout << "🎯 Writing command: FOLLOW_PATH to (" << target.x << ", " << target.y << ", " << target.z << ")" << std::endl;
+                } else {
+                    std::cout << "❌ No target building found!" << std::endl;
+                }
+            } else if (ai_controller.getMode() == AIMode::MANUAL) {
+                // Don't write command for manual mode
+                std::cout << "🔧 Manual mode - skipping command write" << std::endl;
+            } else {
+                python_ai.writeCommand(ai_controller.getMode());
             }
             
-            drone_input = ai_controller.update(delta_time, current_state, world);
+            // Read AI input from Python
+            drone_input = python_ai.readAIInput();
+            
+            // Debug output for Python AI
+            static int debug_counter = 0;
+            if (++debug_counter % 60 == 0) { // Every 60 frames (about once per second)
+                std::cout << "🤖 Python AI Status: ";
+                if (python_ai.hasAIInput()) {
+                    std::cout << "✅ Responding - F:" << drone_input.forward_thrust 
+                              << " Y:" << drone_input.yaw_rate 
+                              << " V:" << drone_input.vertical_thrust << std::endl;
+                } else {
+                    std::cout << "❌ Not responding" << std::endl;
+                }
+            }
+            
+            // If Python AI doesn't respond, use neutral input (hover)
+            if (!python_ai.hasAIInput()) {
+                std::cout << "⚠️  Python AI not responding, hovering..." << std::endl;
+                drone_input = DroneInput{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+            }
         } else {
             // Use manual control
             drone_input = input.getCurrentInput();
