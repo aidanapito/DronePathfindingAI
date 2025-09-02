@@ -43,6 +43,15 @@ class DroneInput:
     roll_rate: float = 0.0
     vertical_thrust: float = 0.0
 
+@dataclass
+class Obstacle:
+    x: float
+    y: float
+    z: float
+    width: float
+    height: float
+    radius: float
+
 class PathfindingAI:
     def __init__(self):
         self.current_mode = AIMode.MANUAL
