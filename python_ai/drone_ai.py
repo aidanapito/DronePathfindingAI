@@ -99,14 +99,14 @@ class PathfindingAI:
         
         input = DroneInput()
         
-        # Forward thrust
-        input.forward_thrust = np.clip(forward_velocity / 50.0, -1.0, 1.0)
+        # Forward thrust - increase scaling
+        input.forward_thrust = np.clip(forward_velocity / 10.0, -1.0, 1.0)
         
-        # Vertical thrust
+        # Vertical thrust - increase scaling
         vertical_diff = to_target[2]
-        input.vertical_thrust = np.clip(vertical_diff / 50.0, -0.5, 0.5)
+        input.vertical_thrust = np.clip(vertical_diff / 10.0, -0.5, 0.5)
         
-        # Yaw control
+        # Yaw control - increase scaling
         target_direction = to_target / (np.linalg.norm(to_target) + 1e-6)
         target_yaw = math.atan2(target_direction[1], target_direction[0])
         yaw_error = target_yaw - drone_state.yaw
@@ -117,10 +117,14 @@ class PathfindingAI:
         while yaw_error < -math.pi:
             yaw_error += 2 * math.pi
         
-        input.yaw_rate = np.clip(yaw_error * 2.0, -1.0, 1.0)
+        input.yaw_rate = np.clip(yaw_error * 5.0, -1.0, 1.0)
         
         if self.debug_enabled:
-            print(f"�� Input - F:{input.forward_thrust:.3f} Y:{input.yaw_rate:.3f} V:{input.vertical_thrust:.3f}")
+            print(f"🎯 Target direction: ({target_direction[0]:.3f}, {target_direction[1]:.3f}, {target_direction[2]:.3f})")
+            print(f"🎯 Target yaw: {target_yaw:.3f} ({target_yaw * 180 / math.pi:.1f}°)")
+            print(f"🎯 Current yaw: {drone_state.yaw:.3f} ({drone_state.yaw * 180 / math.pi:.1f}°)")
+            print(f"🎯 Yaw error: {yaw_error:.3f} ({yaw_error * 180 / math.pi:.1f}°)")
+            print(f"🎯 Input - F:{input.forward_thrust:.3f} Y:{input.yaw_rate:.3f} V:{input.vertical_thrust:.3f}")
         
         return input
 
