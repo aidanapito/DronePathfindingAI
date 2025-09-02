@@ -159,13 +159,16 @@ int main() {
             }
             
             // Read AI input from Python
-            drone_input = python_ai.readAIInput();
+            bool ai_input_available = python_ai.hasAIInput();
+            if (ai_input_available) {
+                drone_input = python_ai.readAIInput();
+            }
             
             // Debug output for Python AI
             static int debug_counter = 0;
             if (++debug_counter % 60 == 0) { // Every 60 frames (about once per second)
                 std::cout << "🤖 Python AI Status: ";
-                if (python_ai.hasAIInput()) {
+                if (ai_input_available) {
                     std::cout << "✅ Responding - F:" << drone_input.forward_thrust 
                               << " Y:" << drone_input.yaw_rate 
                               << " V:" << drone_input.vertical_thrust << std::endl;
@@ -175,7 +178,7 @@ int main() {
             }
             
             // If Python AI doesn't respond, use neutral input (hover)
-            if (!python_ai.hasAIInput()) {
+            if (!ai_input_available) {
                 std::cout << "⚠️  Python AI not responding, hovering..." << std::endl;
                 drone_input = DroneInput{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
             }
