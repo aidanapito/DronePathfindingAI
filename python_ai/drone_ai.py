@@ -109,13 +109,31 @@ class PathfindingAI:
         # Yaw control - increase scaling
         target_direction = to_target / (np.linalg.norm(to_target) + 1e-6)
         target_yaw = math.atan2(target_direction[1], target_direction[0])
+        
+        # Calculate yaw error with proper normalization
         yaw_error = target_yaw - drone_state.yaw
         
-        # Normalize yaw error
-        while yaw_error > math.pi:
-            yaw_error -= 2 * math.pi
-        while yaw_error < -math.pi:
-            yaw_error += 2 * math.pi
+        # Debug: show the raw values
+        if self.debug_enabled:
+            print(f"🎯 Raw target_yaw: {target_yaw:.6f} ({target_yaw * 180 / math.pi:.1f}°)")
+            print(f"🎯 Raw drone_state.yaw: {drone_state.yaw:.6f} ({drone_state.yaw * 180 / math.pi:.1f}°)")
+            print(f"🎯 Raw yaw_error: {yaw_error:.6f} ({yaw_error * 180 / math.pi:.1f}°)")
+        
+        # Special case: if drone is at ~360° and target is at ~0°, force left turn
+        if drone_state.yaw > 5.5 and target_yaw < 0.5:
+            yaw_error = -0.5  # Force a left turn
+            if self.debug_enabled:
+                print(f"🎯 Special case: forcing left turn")
+                print(f"🎯 Special case calculation: forcing yaw_error = {yaw_error:.6f}")
+        else:
+            # Normalize to [-π, π] - this is the key fix
+            if yaw_error > math.pi:
+                yaw_error -= 2 * math.pi
+            elif yaw_error < -math.pi:
+                yaw_error += 2 * math.pi
+        
+        if self.debug_enabled:
+            print(f"🎯 Final yaw_error: {yaw_error:.6f} ({yaw_error * 180 / math.pi:.1f}°)")
         
         input.yaw_rate = np.clip(yaw_error * 5.0, -1.0, 1.0)
         
