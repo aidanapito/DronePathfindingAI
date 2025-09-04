@@ -84,6 +84,4 @@ private:
     void generateWaterTower(float x, float y);
     void generateFactory(float x, float y, float rotation);
     void generateLandmark(float x, float y, int landmarkType);
-    void generateTargetBuilding(float x, float y);
-    void generateRandomTargetBuilding();
 };

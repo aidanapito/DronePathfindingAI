@@ -4,34 +4,58 @@
 World::World(int width, int height, int depth) 
     : width_(width), height_(height), depth_(depth) {
     rng_.seed(std::random_device{}());
+    target_building_ = nullptr;
 }
 
 void World::generateTerrain() {
     // Clear existing obstacles
     obstacles_.clear();
     
-    // Add skyscrapers
-    addSkyscrapers(12);
+    // Create a city-like environment with dense skyscrapers
+    // This creates streets between the buildings
     
-    // Add ground obstacles
-    addGroundObstacles(15);
+    // City grid parameters
+    float cityWidth = width_ * 0.8f;  // Use 80% of world width
+    float cityHeight = height_ * 0.8f; // Use 80% of world height
+    float blockSize = cityWidth / 4.0f; // 4 blocks across
+    float buildingSpacing = blockSize / 3.0f; // 3 buildings per block
     
-    // Add mountain pass
-    addMountainPass();
+    // Starting position for the grid
+    float startX = (width_ - cityWidth) / 2.0f;
+    float startY = (height_ - cityHeight) / 2.0f;
     
-    // Add new structure types
-    addBridges(3);
-    addTunnels(2);
-    addArches(4);
-    addPyramids(2);
-    addSphereBuildings(3);
-    addWindTurbines(5);
-    addRadioTowers(2);
-    addWaterTowers(3);
-    addFactories(4);
+    // Generate dense city grid with multiple buildings per block
+    for (int blockRow = 0; blockRow < 4; ++blockRow) {
+        for (int blockCol = 0; blockCol < 4; ++blockCol) {
+            // For each block, add multiple buildings
+            for (int buildingRow = 0; buildingRow < 3; ++buildingRow) {
+                for (int buildingCol = 0; buildingCol < 3; ++buildingCol) {
+                    // Calculate building position within the block
+                    float blockX = startX + blockCol * blockSize;
+                    float blockY = startY + blockRow * blockSize;
+                    float x = blockX + (buildingCol + 0.5f) * buildingSpacing;
+                    float y = blockY + (buildingRow + 0.5f) * buildingSpacing;
+                    
+                    // Generate random height for variety (40-180 units)
+                    float buildingHeight = 40.0f + (rng_() % 140);
+                    
+                    // Create skyscraper with custom height
+                    generateCitySkyscraper(x, y, buildingHeight);
+                }
+            }
+        }
+    }
     
-    // Add special landmarks
-    addLandmarks();
+    // Add a few wind turbines outside the city
+    addWindTurbines(2);
+    
+    // Set a random building as the target
+    if (!obstacles_.empty()) {
+        std::uniform_int_distribution<int> dist(0, obstacles_.size() - 1);
+        int targetIndex = dist(rng_);
+        target_building_ = &obstacles_[targetIndex];
+        target_building_->type = ObstacleType::FACTORY; // Make it green
+    }
 }
 
 void World::addSkyscrapers(int count) {
@@ -57,26 +81,18 @@ void World::addGroundObstacles(int count) {
 }
 
 void World::addMountainPass() {
-    // Create a mountain range
-    for (int i = 0; i < 8; ++i) {
-        float x = 200.0f + i * 100.0f;
-        float y = 300.0f + (i % 2) * 50.0f;
-        float height = 80.0f + (rng_() % 40);
+    // Create a simple mountain range along one side
+    for (int i = 0; i < 4; ++i) {
+        float x = 100.0f + i * 80.0f;
+        float y = 200.0f;
+        float height = 60.0f + (rng_() % 20);
         generateMountain(x, y, height);
     }
 }
 
 void World::addBridges(int count) {
-    std::uniform_real_distribution<float> x_dist(100.0f, width_ - 100.0f);
-    std::uniform_real_distribution<float> y_dist(100.0f, height_ - 100.0f);
-    std::uniform_real_distribution<float> rot_dist(0.0f, 2.0f * M_PI);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        float rotation = rot_dist(rng_);
-        generateBridge(x, y, rotation);
-    }
+    // Place bridges in strategic locations
+    generateBridge(width_ * 0.5f, height_ * 0.5f, 0.0f); // Center bridge
 }
 
 void World::addTunnels(int count) {
@@ -93,16 +109,9 @@ void World::addTunnels(int count) {
 }
 
 void World::addArches(int count) {
-    std::uniform_real_distribution<float> x_dist(80.0f, width_ - 80.0f);
-    std::uniform_real_distribution<float> y_dist(80.0f, height_ - 80.0f);
-    std::uniform_real_distribution<float> rot_dist(0.0f, 2.0f * M_PI);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        float rotation = rot_dist(rng_);
-        generateArch(x, y, rotation);
-    }
+    // Place arches in strategic locations
+    generateArch(width_ * 0.3f, height_ * 0.7f, 0.0f); // Left arch
+    generateArch(width_ * 0.7f, height_ * 0.3f, 1.57f); // Right arch (rotated)
 }
 
 void World::addPyramids(int count) {
@@ -128,60 +137,44 @@ void World::addSphereBuildings(int count) {
 }
 
 void World::addWindTurbines(int count) {
-    std::uniform_real_distribution<float> x_dist(60.0f, width_ - 60.0f);
-    std::uniform_real_distribution<float> y_dist(60.0f, height_ - 60.0f);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        generateWindTurbine(x, y);
-    }
-}
-
-void World::addRadioTowers(int count) {
-    std::uniform_real_distribution<float> x_dist(80.0f, width_ - 80.0f);
-    std::uniform_real_distribution<float> y_dist(80.0f, height_ - 80.0f);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        generateRadioTower(x, y);
-    }
+    // Place wind turbines in strategic locations
+    generateWindTurbine(width_ * 0.2f, height_ * 0.8f); // Top left
+    generateWindTurbine(width_ * 0.8f, height_ * 0.2f); // Bottom right
 }
 
 void World::addWaterTowers(int count) {
-    std::uniform_real_distribution<float> x_dist(70.0f, width_ - 70.0f);
-    std::uniform_real_distribution<float> y_dist(70.0f, height_ - 70.0f);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        generateWaterTower(x, y);
-    }
+    // Place water tower in strategic location
+    generateWaterTower(width_ * 0.6f, height_ * 0.6f); // Center-right
 }
 
 void World::addFactories(int count) {
-    std::uniform_real_distribution<float> x_dist(150.0f, width_ - 150.0f);
-    std::uniform_real_distribution<float> y_dist(150.0f, height_ - 150.0f);
-    std::uniform_real_distribution<float> rot_dist(0.0f, 2.0f * M_PI);
-    
-    for (int i = 0; i < count; ++i) {
-        float x = x_dist(rng_);
-        float y = y_dist(rng_);
-        float rotation = rot_dist(rng_);
-        generateFactory(x, y, rotation);
-    }
+    // Not used in simplified world
+}
+
+void World::addLandmarks() {
+    // Not used in simplified world
+}
+
+void World::generateLandmark(float x, float y, int landmarkType) {
+    // Not used in simplified world
 }
 
 void World::generateSkyscraper(float x, float y) {
+    generateCitySkyscraper(x, y, 100.0f); // Default height
+}
+
+void World::generateCitySkyscraper(float x, float y, float height) {
     Obstacle skyscraper;
     skyscraper.x = x;
     skyscraper.y = y;
-    skyscraper.z = 50.0f;  // Center height above ground
-    skyscraper.radius = 20.0f;
-    skyscraper.height = 100.0f;
-    skyscraper.is_vertical = true;
+    skyscraper.z = height / 2.0f;  // Center height above ground
+    skyscraper.radius = 15.0f;     // Smaller radius for denser city
+    skyscraper.height = height;
+    skyscraper.is_vertical = true; // Ensure it's vertical
     skyscraper.type = ObstacleType::SKYSCRAPER;
+    skyscraper.rotation = 0.0f;
+    skyscraper.width = 30.0f;   // Building width
+    skyscraper.depth = 30.0f;   // Building depth
     obstacles_.push_back(skyscraper);
 }
 
@@ -332,52 +325,6 @@ void World::generateFactory(float x, float y, float rotation) {
     obstacles_.push_back(factory);
 }
 
-void World::addLandmarks() {
-    // Add a few special landmark structures at strategic locations
-    generateLandmark(width_ * 0.25f, height_ * 0.25f, 0); // Observatory
-    generateLandmark(width_ * 0.75f, height_ * 0.75f, 1); // Monument
-    generateLandmark(width_ * 0.5f, height_ * 0.5f, 2);   // Central Tower
-}
-
-void World::generateLandmark(float x, float y, int landmarkType) {
-    Obstacle landmark;
-    landmark.x = x;
-    landmark.y = y;
-    landmark.rotation = 0.0f;
-    
-    switch (landmarkType) {
-        case 0: // Observatory
-            landmark.z = 60.0f;
-            landmark.radius = 30.0f;
-            landmark.height = 120.0f;
-            landmark.is_vertical = true;
-            landmark.type = ObstacleType::SPHERE_BUILDING;
-            landmark.width = 60.0f;
-            landmark.depth = 60.0f;
-            break;
-        case 1: // Monument
-            landmark.z = 40.0f;
-            landmark.radius = 20.0f;
-            landmark.height = 80.0f;
-            landmark.is_vertical = true;
-            landmark.type = ObstacleType::RADIO_TOWER;
-            landmark.width = 40.0f;
-            landmark.depth = 40.0f;
-            break;
-        case 2: // Central Tower
-            landmark.z = 100.0f;
-            landmark.radius = 25.0f;
-            landmark.height = 200.0f;
-            landmark.is_vertical = true;
-            landmark.type = ObstacleType::SKYSCRAPER;
-            landmark.width = 50.0f;
-            landmark.depth = 50.0f;
-            break;
-    }
-    
-    obstacles_.push_back(landmark);
-}
-
 void World::generateMountain(float x, float y, float height) {
     Obstacle mountain;
     mountain.x = x;
@@ -392,13 +339,30 @@ void World::generateMountain(float x, float y, float height) {
 
 bool World::checkCollision(float x, float y, float z, float radius) const {
     for (const auto& obs : obstacles_) {
-        float dx = x - obs.x;
-        float dy = y - obs.y;
-        float dz = z - obs.z;
-        float distance = sqrt(dx*dx + dy*dy + dz*dz);
-        
-        if (distance < (radius + obs.radius)) {
-            return true; // Collision detected
+        if (obs.type == ObstacleType::SKYSCRAPER) {
+            // For skyscrapers, use rectangular collision detection
+            float halfWidth = obs.width / 2.0f;
+            float halfDepth = obs.depth / 2.0f;
+            float halfHeight = obs.height / 2.0f;
+            
+            // Check if drone is within the building's rectangular bounds
+            bool inX = (x >= obs.x - halfWidth - radius) && (x <= obs.x + halfWidth + radius);
+            bool inY = (y >= obs.y - halfDepth - radius) && (y <= obs.y + halfDepth + radius);
+            bool inZ = (z >= obs.z - halfHeight - radius) && (z <= obs.z + halfHeight + radius);
+            
+            if (inX && inY && inZ) {
+                return true; // Collision detected
+            }
+        } else {
+            // For other objects, use circular collision detection
+            float dx = x - obs.x;
+            float dy = y - obs.y;
+            float dz = z - obs.z;
+            float distance = sqrt(dx*dx + dy*dy + dz*dz);
+            
+            if (distance < (radius + obs.radius)) {
+                return true; // Collision detected
+            }
         }
     }
     return false;
