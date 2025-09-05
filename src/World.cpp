@@ -1,5 +1,6 @@
 #include "World.h"
 #include <cmath>
+#include <iostream>
 
 World::World(int width, int height, int depth) 
     : width_(width), height_(height), depth_(depth) {
@@ -49,12 +50,50 @@ void World::generateTerrain() {
     // Add a few wind turbines outside the city
     addWindTurbines(2);
     
-    // Set a random building as the target
+    // Set a random building (skyscraper) as the target (not wind turbines)
     if (!obstacles_.empty()) {
-        std::uniform_int_distribution<int> dist(0, obstacles_.size() - 1);
-        int targetIndex = dist(rng_);
-        target_building_ = &obstacles_[targetIndex];
-        target_building_->type = ObstacleType::FACTORY; // Make it green
+        // Find all skyscrapers within the city area
+        std::vector<int> building_indices;
+        std::cout << "🔍 Total obstacles: " << obstacles_.size() << std::endl;
+        
+        // City boundaries (from the grid generation)
+        float cityStartX = (width_ - width_ * 0.8f) / 2.0f;
+        float cityEndX = cityStartX + width_ * 0.8f;
+        float cityStartY = (height_ - height_ * 0.8f) / 2.0f;
+        float cityEndY = cityStartY + height_ * 0.8f;
+        
+        std::cout << "🏙️ City boundaries: X(" << cityStartX << " to " << cityEndX << ") Y(" << cityStartY << " to " << cityEndY << ")" << std::endl;
+        
+        for (int i = 0; i < obstacles_.size(); ++i) {
+            std::cout << "🔍 Obstacle " << i << ": type=" << static_cast<int>(obstacles_[i].type) 
+                      << " pos(" << obstacles_[i].x << ", " << obstacles_[i].y << ", " << obstacles_[i].z << ")" << std::endl;
+            
+            // Only select skyscrapers within the city boundaries
+            if (obstacles_[i].type == ObstacleType::SKYSCRAPER && 
+                obstacles_[i].x >= cityStartX && obstacles_[i].x <= cityEndX &&
+                obstacles_[i].y >= cityStartY && obstacles_[i].y <= cityEndY) {
+                building_indices.push_back(i);
+                std::cout << "✅ Added skyscraper " << i << " to target candidates (within city)" << std::endl;
+            }
+        }
+        
+        std::cout << "🎯 Found " << building_indices.size() << " skyscrapers as target candidates" << std::endl;
+        
+        if (!building_indices.empty()) {
+            std::uniform_int_distribution<int> dist(0, building_indices.size() - 1);
+            int selected_index = dist(rng_);
+            int targetIndex = building_indices[selected_index];
+            target_building_ = &obstacles_[targetIndex];
+            target_building_->type = ObstacleType::FACTORY; // Make it green
+            std::cout << "🎯 Target building selected: building " << targetIndex 
+                      << " at (" << target_building_->x << ", " << target_building_->y << ", " << target_building_->z << ")" << std::endl;
+            std::cout << "🔍 Target building pointer set to: " << target_building_ << std::endl;
+        } else {
+            std::cout << "❌ No skyscrapers found within city boundaries!" << std::endl;
+            std::cout << "🔍 Target building pointer remains: " << target_building_ << std::endl;
+        }
+    } else {
+        std::cout << "❌ No obstacles generated!" << std::endl;
     }
 }
 

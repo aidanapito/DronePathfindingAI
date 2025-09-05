@@ -85,12 +85,15 @@ int main() {
     // Set target to the target building location (AFTER world generation)
     const Obstacle* target_building = world.getTargetBuilding();
     if (target_building) {
-        // Target is the top of the building
+        // Target is near the base of the building, not the top
         float target_x = target_building->x;
         float target_y = target_building->y;
-        float target_z = target_building->z + target_building->height; // Top of building
+        float target_z = target_building->z + 20.0f; // 20 units above the base of the building
         ai_controller.setTarget(target_x, target_y, target_z);
-        std::cout << "🎯 AI target set to building top: (" << target_x << ", " << target_y << ", " << target_z << ")" << std::endl;
+        std::cout << "🎯 AI target set to building base: (" << target_x << ", " << target_y << ", " << target_z << ")" << std::endl;
+        std::cout << "🏢 Target building info: pos(" << target_building->x << ", " << target_building->y << ", " << target_building->z 
+                  << ") height:" << target_building->height << " type:" << static_cast<int>(target_building->type) << std::endl;
+        std::cout << "🔍 Target building pointer: " << target_building << std::endl;
     } else {
         std::cout << "❌ Failed to find target building!" << std::endl;
     }
@@ -145,9 +148,11 @@ int main() {
             if (ai_controller.getMode() == AIMode::FOLLOW_PATH) {
                 const Obstacle* target_building = world.getTargetBuilding();
                 if (target_building) {
-                    glm::vec3 target(target_building->x, target_building->y, target_building->z + target_building->height);
+                    glm::vec3 target(target_building->x, target_building->y, target_building->z + 20.0f);
                     python_ai.writeCommand(AIMode::FOLLOW_PATH, target);
                     std::cout << "🎯 Writing command: FOLLOW_PATH to (" << target.x << ", " << target.y << ", " << target.z << ")" << std::endl;
+                    std::cout << "🔍 Target building in AI loop: pos(" << target_building->x << ", " << target_building->y << ", " << target_building->z 
+                              << ") type:" << static_cast<int>(target_building->type) << " pointer:" << target_building << std::endl;
                 } else {
                     std::cout << "❌ No target building found!" << std::endl;
                 }

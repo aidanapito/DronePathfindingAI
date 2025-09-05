@@ -51,6 +51,7 @@ public:
 
 private:
     DroneInput current_input_;
+    DroneInput smoothed_input_;  // Smoothed input values for natural movement
     Camera* camera_;  // Reference to camera for immediate mode switching
     
     // Input state
@@ -79,7 +80,10 @@ private:
     
     // Additional sensitivity controls
     static constexpr float MOUSE_DEADZONE = 1.0f;       // Minimum mouse movement to register
-    static constexpr float DRONE_ROLL_SENSITIVITY = 1.0f;   // Can be adjusted for drone roll speed
-    static constexpr float DRONE_YAW_SENSITIVITY = 0.5f;    // Reduced yaw sensitivity for slower turning
-    static constexpr float DRONE_PITCH_SENSITIVITY = 1.0f;  // Can be adjusted for drone pitch speed
+    static constexpr float DRONE_ROLL_SENSITIVITY = 0.8f;    // Reduced roll sensitivity for smoother banking
+    static constexpr float DRONE_YAW_SENSITIVITY = 0.6f;     // Reduced yaw sensitivity for slower turning
+    static constexpr float DRONE_PITCH_SENSITIVITY = 0.8f;   // Reduced pitch sensitivity for smoother movement
+    static constexpr float FORWARD_THRUST_SENSITIVITY = 0.9f; // Forward thrust sensitivity
+    static constexpr float VERTICAL_THRUST_SENSITIVITY = 0.7f; // Vertical thrust sensitivity
+    static constexpr float INPUT_SMOOTHING_RATE = 8.0f;      // How fast input smoothing occurs (higher = faster)
 };

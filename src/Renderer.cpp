@@ -139,9 +139,9 @@ void Renderer::render3DScene(const glm::vec3& cameraPos, const glm::vec3& camera
     for (const auto& obstacle : obstacles) {
         glm::vec3 color;
         glm::vec3 size;
-        // Transform obstacle coordinates to match new coordinate system
-        // Original: X=left/right, Y=forward/backward, Z=up/down
-        // New: X=left/right, Y=up/down, Z=forward/backward
+        // Transform obstacle coordinates to match OpenGL coordinate system
+        // World coordinates: X=left/right, Y=forward/backward, Z=up/down
+        // OpenGL coordinates: X=left/right, Y=up/down, Z=forward/backward
         glm::vec3 position(obstacle.x, obstacle.z, obstacle.y);
         
         switch (obstacle.type) {

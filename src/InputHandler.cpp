@@ -15,6 +15,9 @@ InputHandler::InputHandler() {
     camera_ = nullptr;
     ai_control_enabled_ = false;
     ai_controller_ = nullptr;
+    
+    // Initialize smoothed input values
+    smoothed_input_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 void InputHandler::processKey(int key, bool pressed) {
@@ -86,52 +89,73 @@ void InputHandler::update(float delta_time) {
     camera_mode_changed_ = false;
     pause_requested_ = false;
     
-    // Calculate continuous input based on current key states
-    current_input_.forward_thrust = 0.0f;
-    current_input_.roll_rate = 0.0f;
-    current_input_.yaw_rate = 0.0f;
-    current_input_.pitch_rate = 0.0f;
-    current_input_.vertical_thrust = 0.0f;
+    // Calculate raw input based on current key states
+    DroneInput raw_input = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     
-    // Check W/S keys for forward/backward thrust
+    // Check W/S keys for forward/backward thrust (smoother control)
     if (key_states_['w'] || key_states_['W']) {
-        current_input_.forward_thrust = 1.0f;
+        raw_input.forward_thrust = 1.0f;
     }
     if (key_states_['s'] || key_states_['S']) {
-        current_input_.forward_thrust = -1.0f;
+        raw_input.forward_thrust = -1.0f;
     }
     
-    // Check A/D keys for roll
+    // Check A/D keys for roll (left/right banking)
     if (key_states_['a'] || key_states_['A']) {
-        current_input_.roll_rate = 1.0f;
+        raw_input.roll_rate = 1.0f;
     }
     if (key_states_['d'] || key_states_['D']) {
-        current_input_.roll_rate = -1.0f;
+        raw_input.roll_rate = -1.0f;
     }
     
-    // Check Q/E keys for yaw
+    // Check Q/E keys for yaw (turning left/right)
     if (key_states_['q'] || key_states_['Q']) {
-        current_input_.yaw_rate = 1.0f * DRONE_YAW_SENSITIVITY;
+        raw_input.yaw_rate = 1.0f;
     }
     if (key_states_['e'] || key_states_['E']) {
-        current_input_.yaw_rate = -1.0f * DRONE_YAW_SENSITIVITY;
+        raw_input.yaw_rate = -1.0f;
     }
     
-    // Check R/F keys for pitch
+    // Check R/F keys for pitch (nose up/down)
     if (key_states_['r'] || key_states_['R']) {
-        current_input_.pitch_rate = 1.0f;
+        raw_input.pitch_rate = 1.0f;
     }
     if (key_states_['f'] || key_states_['F']) {
-        current_input_.pitch_rate = -1.0f;
+        raw_input.pitch_rate = -1.0f;
     }
     
-    // Check Z/X keys for vertical thrust
+    // Check Z/X keys for vertical thrust (up/down)
     if (key_states_['z'] || key_states_['Z']) {
-        current_input_.vertical_thrust = 1.0f;
+        raw_input.vertical_thrust = 1.0f;
     }
     if (key_states_['x'] || key_states_['X']) {
-        current_input_.vertical_thrust = -1.0f;
+        raw_input.vertical_thrust = -1.0f;
     }
+    
+    // Apply input smoothing for more natural movement
+    float smoothing_factor = std::min(1.0f, delta_time * INPUT_SMOOTHING_RATE);
+    
+    // Smooth each input component
+    smoothed_input_.forward_thrust += (raw_input.forward_thrust - smoothed_input_.forward_thrust) * smoothing_factor;
+    smoothed_input_.roll_rate += (raw_input.roll_rate - smoothed_input_.roll_rate) * smoothing_factor;
+    smoothed_input_.yaw_rate += (raw_input.yaw_rate - smoothed_input_.yaw_rate) * smoothing_factor;
+    smoothed_input_.pitch_rate += (raw_input.pitch_rate - smoothed_input_.pitch_rate) * smoothing_factor;
+    smoothed_input_.vertical_thrust += (raw_input.vertical_thrust - smoothed_input_.vertical_thrust) * smoothing_factor;
+    
+    // Apply sensitivity scaling to smoothed inputs
+    current_input_.forward_thrust = smoothed_input_.forward_thrust * FORWARD_THRUST_SENSITIVITY;
+    current_input_.roll_rate = smoothed_input_.roll_rate * DRONE_ROLL_SENSITIVITY;
+    current_input_.yaw_rate = smoothed_input_.yaw_rate * DRONE_YAW_SENSITIVITY;
+    current_input_.pitch_rate = smoothed_input_.pitch_rate * DRONE_PITCH_SENSITIVITY;
+    current_input_.vertical_thrust = smoothed_input_.vertical_thrust * VERTICAL_THRUST_SENSITIVITY;
+    
+    // Apply deadzone to prevent drift
+    const float DEADZONE = 0.05f;
+    if (std::abs(current_input_.forward_thrust) < DEADZONE) current_input_.forward_thrust = 0.0f;
+    if (std::abs(current_input_.roll_rate) < DEADZONE) current_input_.roll_rate = 0.0f;
+    if (std::abs(current_input_.yaw_rate) < DEADZONE) current_input_.yaw_rate = 0.0f;
+    if (std::abs(current_input_.pitch_rate) < DEADZONE) current_input_.pitch_rate = 0.0f;
+    if (std::abs(current_input_.vertical_thrust) < DEADZONE) current_input_.vertical_thrust = 0.0f;
 }
 
 void InputHandler::orbit(float delta_x, float delta_y) {
